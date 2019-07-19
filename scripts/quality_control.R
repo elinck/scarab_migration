@@ -4,6 +4,15 @@ install.packages("ggplot2")
 library(ggplot2)
 
 setwd("~/Dropbox/scarab_migration/ipyrad/")
+file <- "s1_demultiplex_stats.txt"
+nsamples <- 239
+raw <- readLines("s1_demultiplex_stats.txt",warn=FALSE)
+a <- grep("sample_name",raw) # where the data begins
+a <- a[1] 
+reads <- read.table(file,skip=(a),nrow=(nsamples))
+colnames(reads) <- c("sample_ID", "read_count")
+
+
 reads <- read.table("reads.txt")[-1,]
 colnames(reads) <- c("sample_ID", "read_count")
 reads$sample_ID <- gsub("EU","Eurysternus_affin",reads$sample_ID)
@@ -24,7 +33,7 @@ reads$sample_ID <- gsub("222","Oxysternon_silenus",reads$sample_ID)
 reads$sample_ID <- gsub("221","Oxysternon_conspicullatum",reads$sample_ID)
 reads$sample_ID <- gsub('-.*', '', reads$sample_ID) # drop numbers
 colnames(reads) <- c("Species","Read_count")
-reads$read_count <- as.numeric(as.character(reads$read_count))
+reads$Read_count <- as.numeric(as.character(reads$Read_count))
 
 pdf("~/Dropbox/scarab_migration/figures/readcount.pdf",7,7)
 ggplot(reads, aes(x=Species, y=Read_count)) +
