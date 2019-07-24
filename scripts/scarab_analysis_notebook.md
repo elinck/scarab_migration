@@ -136,24 +136,97 @@ ipyrad -p params-e_affin.txt -s 34567
 The output we’re interested in are .vcf files; we’ll be working with
 these for the rest of the analysis.
 
+## Plotting sampling localities
+
+Before we start analyzing our genotypic data in R, it will be useful to
+visualize where we collected our samples. We’ll do this using the
+`ggmap` package and our coordinate data in
+`data/scarab_spp_master.csv1`. We’ll also set up a common color palette
+to use for the remainder of our study. First, we’ll load our data, and
+use a Google Maps API to grab contour maps of our field sites.
+
+``` r
+library(ggmap)
+```
+
+    ## Google's Terms of Service: https://cloud.google.com/maps-platform/terms/.
+
+    ## Please cite ggmap if you use it! See citation("ggmap") for details.
+
+``` r
+library(wesanderson)
+library(gridExtra)
+
+# read in locality data
+localities <- read.csv("/Users/ethanlinck/Dropbox/scarab_migration/data/scarab_spp_master.csv")
+levels(localities$locality) # see levels 
+```
+
+    ##  [1] "CC1-730"    "CC1-800"    "CC2-925"    "CC3-1050"   "CC4-1175"  
+    ##  [6] "HU-1575"    "HU-1700"    "HU-1825"    "HU-1950"    "HU-3"      
+    ## [11] "HU-4"       "Macucaloma" "Yanayacu"
+
+``` r
+localities$transect <- ifelse(grepl("CC",localities$locality),'colonso','pipeline') # add levels for transects
+
+# pick the center point for our maps, and an appropriate zoom level
+pipeline <- get_map(location=c(lon=-77.85, lat=-0.615), zoom = 13, color = "bw")
+```
+
+    ## Source : https://maps.googleapis.com/maps/api/staticmap?center=-0.615,-77.85&zoom=13&size=640x640&scale=2&maptype=terrain&language=en-EN&key=xxx-5_Qt0MSMJA8w-HT1Pk
+
+``` r
+colonso <- get_map(location=c(lon=-77.89, lat=-0.937), zoom = 14, color = "bw")
+```
+
+    ## Source : https://maps.googleapis.com/maps/api/staticmap?center=-0.937,-77.89&zoom=14&size=640x640&scale=2&maptype=terrain&language=en-EN&key=xxx-5_Qt0MSMJA8w-HT1Pk
+
+``` r
+# subset locality data by transect
+df.pipeline <- localities[localities$transect=='pipeline',]
+df.colonso <- localities[localities$transect=='colonso',]
+```
+
+We’ll use the “Rushmore1” palette from the [wesanderson
+package](https://github.com/karthik/wesanderson), but build a custom
+palette so we can hold colors constant across the levels of our sampling
+localities.
+
+``` r
+pal <- wes_palette("Rushmore1", 13, type = "continuous")
+scale_color_wes <- function(...){
+    ggplot2:::manual_scale(
+        'color', 
+        values = setNames(pal, levels(localities$locality)), 
+        ...
+    )
+}
+```
+
+Now, we’ll plot these using [ggmap](https://github.com/dkahle/ggmap).
+
+![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+
+Not quite publication quality, but good enough for now.
+
 ## Additional filtering and testing for genetic differentiation
 
-Our driving question is whether dispersal (and gene flow) is reduced
-across elevational gradients relative to within an elevational band. We
-are going to try and answer this question in a number of ways. An
-important first step is running principle component analysis to ask
-whether there is population genetic structure, and whether it relates to
-elevation. For now, let’s only look at *D. satanas*, as we have the best
-sampling. We’ll read in locality data, our .vcf file, and then use a
-custom chunk of code to replace `ipyrad's` weird .vcf syntax with
-something `R` can use.
+Now that we’re somewhat spatially oriented, we’ll dive in to analyzing
+our genotypic data. Our driving question is whether dispersal (and gene
+flow) is reduced across elevational gradients relative to within an
+elevational band. We are going to try and answer this question in a
+number of ways. An important first step is running principle component
+analysis to ask whether there is population genetic structure, and
+whether it relates to elevation. For now, let’s only look at *D.
+satanas*, as we have the best sampling. We’ll read in locality data, our
+.vcf file, and then use a custom chunk of code to replace `ipyrad's`
+weird .vcf syntax with something `R` can use.
 
 ``` r
 # load libraries
 library(vcfR)
 library(adegenet)
 library(ggplot2)
-library(wesanderson)
 library(tidyverse)
 library(reshape2)
 library(poppr)
@@ -220,7 +293,7 @@ dpf <- dpf[ dpf$Depth > 0, ]
 
 Now, let’s plot it:
 
-![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
 
 Variable, but we can see our basic filter worked (no calls \<3 reads).
 Let’s consider it okay for now and run a PCA. We’ll have to change the
@@ -251,7 +324,7 @@ satanas.pc <- merge(satanas.pc, localities, by.x = "sample", by.y = "sample_ID")
 We’ll now plot the first two PCs against each other, and plot PC1
 against elevation:
 
-![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
-Hmm, looks a lot like panmixia\! I’ll add the other species next week,
-after I’ve checked our assembly.
+Hmm, looks a lot like panmixia\! I’ll add the other species after I’ve
+checked our assembly.

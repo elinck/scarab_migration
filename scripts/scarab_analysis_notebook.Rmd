@@ -117,16 +117,77 @@ ipyrad -p params-e_affin.txt -s 34567
 
 The output we're interested in are .vcf files; we'll be working with these for the rest of the analysis. 
 
+## Plotting sampling localities
+
+Before we start analyzing our genotypic data in R, it will be useful to visualize where we collected our samples. We'll do this using the `ggmap` package and our coordinate data in `data/scarab_spp_master.csv1`. We'll also set up a common color palette to use for the remainder of our study. First, we'll load our data, and use a Google Maps API to grab contour maps of our field sites. 
+
+```{r}
+library(ggmap)
+library(wesanderson)
+library(gridExtra)
+
+# read in locality data
+localities <- read.csv("/Users/ethanlinck/Dropbox/scarab_migration/data/scarab_spp_master.csv")
+levels(localities$locality) # see levels 
+localities$transect <- ifelse(grepl("CC",localities$locality),'colonso','pipeline') # add levels for transects
+
+# pick the center point for our maps, and an appropriate zoom level
+pipeline <- get_map(location=c(lon=-77.85, lat=-0.615), zoom = 13, color = "bw")
+colonso <- get_map(location=c(lon=-77.89, lat=-0.937), zoom = 14, color = "bw")
+
+# subset locality data by transect
+df.pipeline <- localities[localities$transect=='pipeline',]
+df.colonso <- localities[localities$transect=='colonso',]
+```
+
+
+We'll use the "Rushmore1" palette from the [wesanderson package](https://github.com/karthik/wesanderson), but build a custom palette so we can hold colors constant across the levels of our sampling localities. 
+
+
+```{r}
+pal <- wes_palette("Rushmore1", 13, type = "continuous")
+scale_color_wes <- function(...){
+    ggplot2:::manual_scale(
+        'color', 
+        values = setNames(pal, levels(localities$locality)), 
+        ...
+    )
+}
+```
+
+Now, we'll plot these using [ggmap](https://github.com/dkahle/ggmap). 
+
+```{r, echo=FALSE}
+p1 <- ggmap(pipeline) +
+  theme_bw() +
+  geom_text(data = df.pipeline,
+             aes(x = long, y = lat, color = locality, label = locality)) +
+  scale_color_wes() +
+  ggtitle("Pipeline transect") +
+  theme(axis.title = element_blank(), legend.position = "none", plot.margin = unit(c(0,0,0,0), "lines"))
+
+p2 <- ggmap(colonso) +
+  theme_bw() +
+  geom_text(data = df.colonso,
+             aes(x = long, y = lat, color = locality, label = locality)) +
+  scale_color_wes() +
+  ggtitle("Colonso de Chalupas transect") +
+  theme(axis.title = element_blank(), legend.position = "none", plot.margin = unit(c(0,0,0,0), "lines"))
+
+grid.arrange(p1,p2,ncol=2)
+```
+
+Not quite publication quality, but good enough for now. 
+
 ## Additional filtering and testing for genetic differentiation
 
-Our driving question is whether dispersal (and gene flow) is reduced across elevational gradients relative to within an elevational band. We are going to try and answer this question in a number of ways. An important first step is running principle component analysis to ask whether there is population genetic structure, and whether it relates to elevation. For now, let's only look at *D. satanas*, as we have the best sampling. We'll read in locality data, our .vcf file, and then use a custom chunk of code to replace `ipyrad's` weird .vcf syntax with something `R` can use. 
+Now that we're somewhat spatially oriented, we'll dive in to analyzing our genotypic data. Our driving question is whether dispersal (and gene flow) is reduced across elevational gradients relative to within an elevational band. We are going to try and answer this question in a number of ways. An important first step is running principle component analysis to ask whether there is population genetic structure, and whether it relates to elevation. For now, let's only look at *D. satanas*, as we have the best sampling. We'll read in locality data, our .vcf file, and then use a custom chunk of code to replace `ipyrad's` weird .vcf syntax with something `R` can use. 
 
 ```{r, echo=TRUE,message=FALSE}
 # load libraries
 library(vcfR)
 library(adegenet)
 library(ggplot2)
-library(wesanderson)
 library(tidyverse)
 library(reshape2)
 library(poppr)
@@ -210,20 +271,21 @@ We'll now plot the first two PCs against each other, and plot PC1 against elevat
 
 ```{r, echo=FALSE}
 library(patchwork)
-pal <- wes_palette("Rushmore1", 8, type = "continuous")
 
-a <- ggplot(data=satanas.pc,aes(x=PC1,y=PC2,col=satanas.pc$pop)) + 
+a <- ggplot(data=satanas.pc,aes(x=PC1,y=PC2,col=satanas.pc$locality)) + 
   theme_classic() +
   geom_point()+
-  scale_color_manual(values=pal,name="locality")
+  scale_color_wes(name="locality")
 
-b <- ggplot(data=satanas.pc,aes(x=elevation,y=PC1,col=satanas.pc$pop)) + 
+b <- ggplot(data=satanas.pc,aes(x=elevation,y=PC1,col=satanas.pc$locality)) + 
   theme_classic() +
   geom_point()+
-  scale_color_manual(values=pal,name="locality")
+  scale_color_wes(name="locality")
+
 
 a+b
 
 ```
 
-Hmm, looks a lot like panmixia! I'll add the other species next week, after I've checked our assembly. 
+Hmm, looks a lot like panmixia! I'll add the other species after I've checked our assembly. 
+
