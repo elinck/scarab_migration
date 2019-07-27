@@ -20,10 +20,10 @@ shell commands in the appropriate directory via terminal.)
 gunzip -c ~/Dropbox/scarab_migration/raw_data/UTN-DUNG_S167_L007_R1_001.fastq.gz | head -n 12
 ```
 
-We then switch to using program `ipyrad`, [which has extensive
-documentation you can view here](https://ipyrad.readthedocs.io/). We
-first generate a params file, which we will use for the remainder of
-data assembly.
+We’ll initially use the program `ipyrad` [which has extensive
+documentation you can view here](https://ipyrad.readthedocs.io/) to
+demultiplex this file into our original libraries. We first generate a
+params file.
 
 ``` bash
 ipyrad -n scarab
@@ -31,11 +31,10 @@ ipyrad -n scarab
 
 We modify the file `ipyrad/params-scarab.txt` to match our data and fill
 in the appropriate paths to our data and barcode file. We then run the
-first two steps of the ipyrad pipeline, which demultiplex the single
-large gunzipped fastq file and quality trims and filters reads.
+first step of the ipyrad only, which we indicate with the `-s` option:
 
 ``` bash
-ipyrad -p params-scarab.txt -s 12
+ipyrad -p params-scarab.txt -s 1
 ```
 
 When this completes, you’ll see the relevant directory fill with fastq
@@ -94,11 +93,18 @@ Now that we’re comfortable we sequenced *something*, we’re going to try
 and assemble the remainder of our data. We’re only going to analyze the
 five species with reasonable sampling: *Deltochilum speciocissimum*,
 *Deltochilum tesselatum*, *Dichotomius podalirius*, *Dichotomius
-satanas*, and *Eurysternus affin*. Because I’m not confident in how
-`ipyrad` is assembling these data right now, I’m going to keep this
-brief as it may change, but essentially we want to make branches of our
-original pipeline for each species and then run these independently.
-We’ll need to move our files to unique folders first as well
+satanas*, and *Eurysternus affin*. We’ll run the rest of the assembly
+and variant calling steps using [Jon Puritz’ dDocent
+pipeline](https://www.ddocent.com/), which is optimized for nonmodel
+organisms and does a good job maximizing the signal to noise ratio in
+tricky denovo assemblies. First, we’ll make separate directories and
+move our files (named by their initial morphospecies ID codes) to them.
+We’ll then use a bash oneliner paired with files linking our current
+sample names to a modified sample name format dDocent requires to get
+ready to run the pipeline. Finally, we’ll run dDocent using a set of
+config files for each species; these are largely the same, except for a
+more lenient clustering threshhold for *D. satanas* based on exploratory
+data analysis.
 
 ``` bash
 
@@ -118,42 +124,55 @@ mv DI1* d_satanas/
 mv DI5* d_satanas/
 mv EU* e_affin/ 
 
-# make ipyrad branches
-ipyrad -p params-scarab.txt -b d_speciocissimum
-ipyrad -p params-scarab.txt -b d_tesselatum
-ipyrad -p params-scarab.txt -b d_podalirirus
-ipyrad -p params-scarab.txt -b d_satanas
-ipyrad -p params-scarab.txt -b e_affin
+# rename files
+cd d_speciocissimum/; eval "$(sed 's/^/mv /g' d_spec_rename.txt )"; cd ../.
+cd d_tesselatum/; eval "$(sed 's/^/mv /g' d_tess_rename.txt )"; cd ../.
+cd d_podalirius/; eval "$(sed 's/^/mv /g' d_pod_rename.txt )"; cd ../.
+cd d_satanas/; eval "$(sed 's/^/mv /g' d_satanas_rename.txt )"; cd ../.
+cd e_affin/; eval "$(sed 's/^/mv /g' e_affin_rename.txt )"; cd ../.
 
-# run independently; be sure to edit params files for paths
-ipyrad -p params-d_speciocissimum.txt -s 34567
-ipyrad -p params-d_tesselatum.txt -s 34567
-ipyrad -p params-d_podalirirus.txt -s 34567
-ipyrad -p params-d_satanas.txt -s 34567
-ipyrad -p params-e_affin.txt -s 34567
+# run independently;
+cd d_speciocissimum/; dDocent d_spec_config.file; cd ../.
+cd d_tesselatum/; dDocent d_tess_config.file; cd ../.
+cd d_podalirius/; dDocent d_pod_config.file; cd ../.
+cd d_satanas/; dDocent d_satanas_config.file; cd ../.
+cd e_affin/; dDocent e_affin_config.file; cd ../.
 ```
 
 The output we’re interested in are .vcf files; we’ll be working with
-these for the rest of the analysis.
+these for the rest of the analysis. First, though, we’ll run a set of
+standard filtering steps on the .vcf files for each species. We’re going
+to drop any individuals with missing data at more than 30% of loci, any
+loci missing data at more than 25% of individuals, all SNPs with a
+minimum minor allele frequency of 0.05 and a minimum minor allele count
+of 3, all SNPs with a quality (Phred) score of \<30, and any genotypes
+with fewer than 5 reads across all individuals. We’ll then run dDocent’s
+`dDocent_filter` command, which further trims for allelic balance,
+depth, and other parameters you can read about in the [program’s
+documentation](https://www.ddocent.com/filtering/). All are very
+sensible. I’ve put all my commands together in a simple bash script,
+`snp_filtering.sh`, but let the buyer beware: it’s written to be a
+record of what I did, and not reproducible, although it would be easy
+enough to tweak. For now, we’ll run it as I did, with a single command:
+
+``` bash
+bash scripts/snp_filtering.sh
+```
+
+Download these from your cluster, or whereever you’re running your
+analyses. From here on out, we’ll be working in `R`.
 
 ## Plotting sampling localities
 
 Before we start analyzing our genotypic data in R, it will be useful to
 visualize where we collected our samples. We’ll do this using the
-`ggmap` package and our coordinate data in
-`data/scarab_spp_master.csv1`. We’ll also set up a common color palette
-to use for the remainder of our study. First, we’ll load our data, and
-use a Google Maps API to grab contour maps of our field sites.
+`ggmap` package and our coordinate data in `data/scarab_spp_master.csv`.
+We’ll also set up a common color palette to use for the remainder of our
+study. First, we’ll load our data, and use a Google Maps API to grab
+contour maps of our field sites.
 
 ``` r
 library(ggmap)
-```
-
-    ## Google's Terms of Service: https://cloud.google.com/maps-platform/terms/.
-
-    ## Please cite ggmap if you use it! See citation("ggmap") for details.
-
-``` r
 library(wesanderson)
 library(gridExtra)
 
@@ -171,33 +190,24 @@ localities$transect <- ifelse(grepl("CC",localities$locality),'colonso','pipelin
 
 # pick the center point for our maps, and an appropriate zoom level
 pipeline <- get_map(location=c(lon=-77.85, lat=-0.615), zoom = 13, color = "bw")
-```
-
-    ## Source : https://maps.googleapis.com/maps/api/staticmap?center=-0.615,-77.85&zoom=13&size=640x640&scale=2&maptype=terrain&language=en-EN&key=xxx-5_Qt0MSMJA8w-HT1Pk
-
-``` r
 colonso <- get_map(location=c(lon=-77.89, lat=-0.937), zoom = 14, color = "bw")
-```
 
-    ## Source : https://maps.googleapis.com/maps/api/staticmap?center=-0.937,-77.89&zoom=14&size=640x640&scale=2&maptype=terrain&language=en-EN&key=xxx-5_Qt0MSMJA8w-HT1Pk
-
-``` r
 # subset locality data by transect
 df.pipeline <- localities[localities$transect=='pipeline',]
 df.colonso <- localities[localities$transect=='colonso',]
 ```
 
-We’ll use the “Rushmore1” palette from the [wesanderson
+We’ll use the “Darjeeling1” palette from the [wesanderson
 package](https://github.com/karthik/wesanderson), but build a custom
 palette so we can hold colors constant across the levels of our sampling
 localities.
 
 ``` r
-pal <- wes_palette("Rushmore1", 13, type = "continuous")
+pal <- wes_palette("Darjeeling1", 14, type = "continuous")
 scale_color_wes <- function(...){
     ggplot2:::manual_scale(
         'color', 
-        values = setNames(pal, levels(localities$locality)), 
+        values = setNames(pal, levels(localities$short_locality)), 
         ...
     )
 }
@@ -205,11 +215,11 @@ scale_color_wes <- function(...){
 
 Now, we’ll plot these using [ggmap](https://github.com/dkahle/ggmap).
 
-![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
 Not quite publication quality, but good enough for now.
 
-## Additional filtering and testing for genetic differentiation
+## Testing for genetic differentiation
 
 Now that we’re somewhat spatially oriented, we’ll dive in to analyzing
 our genotypic data. Our driving question is whether dispersal (and gene
@@ -217,114 +227,203 @@ flow) is reduced across elevational gradients relative to within an
 elevational band. We are going to try and answer this question in a
 number of ways. An important first step is running principle component
 analysis to ask whether there is population genetic structure, and
-whether it relates to elevation. For now, let’s only look at *D.
-satanas*, as we have the best sampling. We’ll read in locality data, our
-.vcf file, and then use a custom chunk of code to replace `ipyrad's`
-weird .vcf syntax with something `R` can use.
+whether it relates to elevation. We’ll read in locality data, our .vcf
+files, and run principle component analysis on each species in turn.
+This will involve redundant chunks of code. First, *Dichotomius
+satanas*, our species with the most throrough sampling (*n*=100).
 
 ``` r
 # load libraries
 library(vcfR)
 library(adegenet)
 library(ggplot2)
+library(wesanderson)
 library(tidyverse)
 library(reshape2)
-library(poppr)
+library(patchwork)
 
 # set wd and read in locality data
-setwd("/Users/ethanlinck/Dropbox/scarab_migration/")
-localities <- read.csv("data/scarab_spp_master.csv")
+localities <- read.csv("/Users/ethanlinck/Dropbox/scarab_migration/data/scarab_spp_master.csv")
+
+### d. satanas ###
 
 # read in .vcf and sample / pop names; convert to genlight
-satanas.vcf <- read.vcfR("ipyrad/d_satanas_outfiles/d_satanas.vcf", verbose=FALSE)
+satanas.vcf <- read.vcfR("/Users/ethanlinck/Dropbox/scarab_migration/raw_data/d_satanas_filtered.FIL.recode.vcf", verbose = FALSE)
 
-# fix ipyrad vcf missing data issue
-satanas.vcf@gt <- 
-  satanas.vcf@gt %>% 
-  as_tibble() %>% 
-  mutate_all(.funs = function(x) replace(x, which(x == "./.:0:0,0,0,0"| x == "NA"), NA)) %>%
-  as.matrix() 
-```
-
-Now, let’s check the .vcf file:
-
-``` r
-satanas.vcf
-```
-
-    ## ***** Object of Class vcfR *****
-    ## 100 samples
-    ## 8364 CHROMs
-    ## 61,912 variants
-    ## Object size: 52.8 Mb
-    ## 49.18 percent missing data
-    ## *****        *****         *****
-
-49.18% missing data is typical for ddRADseq data, so that’s reassuring.
-Let’s drop loci missing data for lots of individuals (\>40%).
-
-``` r
-# drop rows with >40% MD
-dp <- vcfR::extract.gt(satanas.vcf,  element = "DP", as.numeric = TRUE)
-satanas.miss <- apply(dp, MARGIN = 1, function(x){sum(is.na(x))})
-satanas.miss <- satanas.miss / ncol(dp)
-satanas.vcf <- satanas.vcf[satanas.miss < 0.4, ]
-satanas.vcf
-```
-
-    ## ***** Object of Class vcfR *****
-    ## 100 samples
-    ## 1500 CHROMs
-    ## 10,092 variants
-    ## Object size: 9 Mb
-    ## 29.71 percent missing data
-    ## *****        *****         *****
-
-10,000 SNPs on 1500 chromosomes is pretty reasonable. Let’s check the
-average depth of coverage for a handful of individuals:
-
-``` r
-# randomly sample ten indiduals to check depth, arrange data frame
-dp2 <- dp[,sample(ncol(dp),size=10,replace=FALSE)]
-dpf <- melt(dp2, varnames = c("Index", "Sample"),
-            value.name = "Depth", na.rm = TRUE)
-dpf <- dpf[ dpf$Depth > 0, ]
-```
-
-Now, let’s plot it:
-
-![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
-
-Variable, but we can see our basic filter worked (no calls \<3 reads).
-Let’s consider it okay for now and run a PCA. We’ll have to change the
-file format to something `adegenet` can read, then do some manipulation
-and assign new individual and population labels from our directory:
-
-``` r
+# pca 
 satanas.dna <- vcfR2DNAbin(satanas.vcf, unphased_as_NA = F, consensus = T, extract.haps = F)
-```
-
-    ## After extracting indels, 10092 variants remain.
-
-``` r
 satanas.gen <- DNAbin2genind(satanas.dna)
-satanas.samples <- as.character(read.table("/Users/ethanlinck/Dropbox/scarab_migration/ipyrad/d_satanas_outfiles/samples_d_satanas.txt")[[1]]) 
-satanas.pops <- as.factor(as.character(read.table("/Users/ethanlinck/Dropbox/scarab_migration/ipyrad/d_satanas_outfiles/populations_d_satanas.txt")[[1]])) 
-rownames(satanas.gen@tab) <- satanas.samples
-satanas.gen@pop <- satanas.pops
-satanas.scaled <- scaleGen(satanas.gen,NA.method="mean",scale=F)
+satanas.pops <-  gsub( "_.*$", "", rownames(satanas.gen@tab))
+satanas.gen@pop <- as.factor(satanas.pops)
+satanas.scaled <- scaleGen(satanas.gen,NA.method="zero",scale=F)
 satanas.pca <- prcomp(satanas.scaled,center=F,scale=F)
 satanas.pc <- data.frame(satanas.pca$x[,1:3])
 satanas.pc$sample <- rownames(satanas.pc)
 satanas.pc$pop <- satanas.pops
 satanas.pc$species <- rep("Dichotomius_satanas",nrow(satanas.pc))
-satanas.pc <- merge(satanas.pc, localities, by.x = "sample", by.y = "sample_ID")
 ```
 
-We’ll now plot the first two PCs against each other, and plot PC1
-against elevation:
+We’ve run PCA and merged the first three PC axes with our sampling data.
+Let’s plot PC1 and PC2, and also plot PC1 against elevation. (Note that
+the colors will jump around during these initial plots, but will match
+our sampling locality map once we’ve merged the different data frames.
+So fear not\!)
+
+![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+
+Looks like panmixia to me, but otherwise reasonable, with no wild
+outliers. We’ll continue as before for the remaining four species. Next
+up is *Deltochilum speciocissimum*.
+
+``` r
+# read in .vcf and sample / pop names; convert to genlight
+spec.vcf <- read.vcfR("/Users/ethanlinck/Dropbox/scarab_migration/raw_data/d_spec_filtered.FIL.recode.vcf", verbose = FALSE)
+
+# pca 
+spec.dna <- vcfR2DNAbin(spec.vcf, unphased_as_NA = F, consensus = T, extract.haps = F)
+spec.gen <- DNAbin2genind(spec.dna)
+spec.pops <-  gsub( "_.*$", "", rownames(spec.gen@tab))
+spec.gen@pop <- as.factor(spec.pops)
+spec.scaled <- scaleGen(spec.gen,NA.method="mean",scale=F)
+spec.pca <- prcomp(spec.scaled,center=F,scale=F)
+spec.pc <- data.frame(spec.pca$x[,1:3])
+spec.pc$sample <- rownames(spec.pc)
+spec.pc$pop <- spec.pops
+spec.pc$species <- rep("Deltochilum_speciocissimum",nrow(spec.pc))
+
+# merge with sample data
+spec.pc <- merge(spec.pc, localities, by.x = "sample", by.y = "ddocent_ID")
+```
+
+Plots:
+
+![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+
+Looks reasonable. This time, we see strong popualtion genetic structure
+that largely segregates across the Cosanga river. A curious exception is
+a sample at the 2150 locality, which might represent a recent migrant.
+Now, we’ll look at *Deltochilum tesselatum*.
+
+``` r
+# read in .vcf and sample / pop names; convert to genlight
+tess.vcf <- read.vcfR("/Users/ethanlinck/Dropbox/scarab_migration/raw_data/d_tess_filtered.FIL.recode.vcf", verbose = FALSE)
+
+# pca 
+tess.dna <- vcfR2DNAbin(tess.vcf, unphased_as_NA = F, consensus = T, extract.haps = F)
+tess.gen <- DNAbin2genind(tess.dna)
+tess.pops <-  gsub( "_.*$", "", rownames(tess.gen@tab))
+tess.gen@pop <- as.factor(tess.pops)
+tess.scaled <- scaleGen(tess.gen,NA.method="mean",scale=F)
+tess.pca <- prcomp(tess.scaled,center=F,scale=F)
+tess.pc <- data.frame(tess.pca$x[,1:3])
+tess.pc$sample <- rownames(tess.pc)
+tess.pc$pop <- tess.pops
+tess.pc$species <- rep("Deltochilum_tesselatum",nrow(tess.pc))
+
+# merge with sample data
+tess.pc <- merge(tess.pc, localities, by.x = "sample", by.y = "ddocent_ID")
+```
+
+Plots:
 
 ![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
-Hmm, looks a lot like panmixia\! I’ll add the other species after I’ve
-checked our assembly.
+Panmixia again, although there are fewer samples. Now, *Dichotomius
+podalirius*.
+
+``` r
+# read in .vcf and sample / pop names; convert to genlight
+pod.vcf <- read.vcfR("/Users/ethanlinck/Dropbox/scarab_migration/raw_data/d_pod_filtered.FIL.recode.vcf", verbose = FALSE)
+
+# pca 
+pod.dna <- vcfR2DNAbin(pod.vcf, unphased_as_NA = F, consensus = T, extract.haps = F)
+pod.gen <- DNAbin2genind(pod.dna)
+pod.pops <-  gsub( "_.*$", "", rownames(pod.gen@tab))
+pod.gen@pop <- as.factor(pod.pops)
+pod.scaled <- scaleGen(pod.gen,NA.method="mean",scale=F)
+pod.pca <- prcomp(pod.scaled,center=F,scale=F)
+pod.pc <- data.frame(pod.pca$x[,1:3])
+pod.pc$sample <- rownames(pod.pc)
+pod.pc$pop <- pod.pops
+pod.pc$species <- rep("Dichotomius_podalirius",nrow(pod.pc))
+
+# merge with sample data
+pod.pc <- merge(pod.pc, localities, by.x = "sample", by.y = "ddocent_ID")
+```
+
+Plots:
+
+![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
+
+Again, a big mess. Note that we have fewer sampling localities here, and
+that they are from the Colonso de Chalupas gradient. We’ll now run our
+final species, *Eurysternus affin*, which is also from Colonso de
+Chalupas.
+
+``` r
+# read in .vcf and sample / pop names; convert to genlight
+affin.vcf <- read.vcfR("/Users/ethanlinck/Dropbox/scarab_migration/raw_data/e_affin_filtered.FIL.recode.vcf", verbose = FALSE)
+
+# pca 
+affin.dna <- vcfR2DNAbin(affin.vcf, unphased_as_NA = F, consensus = T, extract.haps = F)
+affin.gen <- DNAbin2genind(affin.dna)
+affin.pops <-  gsub( "_.*$", "", rownames(affin.gen@tab))
+affin.gen@pop <- as.factor(affin.pops)
+affin.scaled <- scaleGen(affin.gen,NA.method="mean",scale=F)
+affin.pca <- prcomp(affin.scaled,center=F,scale=F)
+affin.pc <- data.frame(affin.pca$x[,1:3])
+affin.pc$sample <- rownames(affin.pc)
+affin.pc$pop <- affin.pops
+affin.pc$species <- rep("Eurysternus_affin",nrow(affin.pc))
+
+# merge with sample data
+affin.pc <- merge(affin.pc, localities, by.x = "sample", by.y = "ddocent_ID")
+```
+
+Plots:
+
+![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
+
+This is interesting: two extreme outliers. Let’s figure out what they
+are.
+
+``` r
+# drop outliers
+drop <- affin.pc[which(affin.pc$PC1>5),] 
+drop <- drop$sample
+drop
+```
+
+    ## [1] "1175_137" "1175_138"
+
+Turns out these two samples were marked as potentially belonging to a
+species other than *E. affin*. Seems like that’s almost certainly the
+case, so let’s drop them from the dataset, and merge all our separate
+data frames.
+
+``` r
+affin.gen <- affin.gen[indNames(affin.gen)!=drop[1] & indNames(affin.gen)!=drop[2]]
+affin.pops <-  gsub( "_.*$", "", rownames(affin.gen@tab))
+affin.gen@pop <- as.factor(affin.pops)
+affin.scaled <- scaleGen(affin.gen,NA.method="mean",scale=F)
+affin.pca <- prcomp(affin.scaled,center=F,scale=F)
+affin.pc <- data.frame(affin.pca$x[,1:3])
+affin.pc$sample <- rownames(affin.pc)
+affin.pc$pop <- affin.pops
+affin.pc$species <- rep("Eurysternus_affin",nrow(affin.pc))
+
+# merge with sample data
+affin.pc <- merge(affin.pc, localities, by.x = "sample", by.y = "ddocent_ID")
+
+# merge all data frames
+master.df <- rbind.data.frame(satanas.pc,spec.pc,tess.pc,pod.pc,affin.pc)
+```
+
+Now’ let’s plot all these together with faceting.
+
+![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
+
+This still looks a lot like panmixia, but this will be useful going
+forward, as we know we won’t be violating model assumptions for future
+analyses (at least except for *D. speciocissimum*, which we’ll have to
+deal with later).

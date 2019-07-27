@@ -1,0 +1,28 @@
+Number of Processors
+32
+Maximum Memory
+250
+Trimming
+yes
+Assembly?
+yes
+Type_of_Assembly
+SE
+Clustering_Similarity%
+0.90
+Minimum within individual coverage level to include a read for assembly (K1)
+6
+Minimum number of individuals a read must be present in to include for assembly (K2)
+6
+Mapping_Reads?
+yes
+Mapping_Match_Value
+1
+Mapping_MisMatch_Value
+3
+Mapping_GapOpen_Penalty
+5
+Calling_SNPs?
+yes
+Email
+ethanblinck@gmail.com
