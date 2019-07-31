@@ -8,6 +8,8 @@ library(broom)
 library(data.table)
 library(vcfR)
 library(fossil)
+library(viridis)
+library(patchwork)
 
 # set wd and read in locality data
 setwd("/Users/ethanlinck/Dropbox/scarab_migration/")
@@ -62,16 +64,60 @@ drop.pop <- c("800","925","1050","1175")
 
 # drop levels and calc distance
 pop.loc.sat <- pop.loc[!pop.loc$pop %in% drop.pop,]
+droplevels(pop.loc.sat)
 geodist.sat <- earth.dist(pop.loc.sat[c("long", "lat")], dist = FALSE)
 
 # uh what does a negative relationship mean 
 plot(geodist.sat,
      satanas.p.fst.all,
-     pch=19,
+     pch=16,
      ylab="pairwise Fst",
-     xlab="geographic distance",
+     xlab="km",
      main="isolation by distance")
 legend(x="bottomright",pch=19,col=c(1,2))
+
+sat.dist <- as.vector(geodist.sat)
+sat.gen <- as.vector(satanas.p.fst.all)
+
+# loop to figure out magnitude
+mag <- vector()
+for(i in 1:8){
+  tmp <- abs(as.vector(satanas.n[i,i]-(satanas.n[,1])))
+  mag <- append(mag, tmp)
+}
+
+pop <- vector()
+for(i in 1:8){
+  tmp <- abs(as.vector(satanas.n[i,i]-(satanas.n[,1])))
+  mag <- append(mag, tmp)
+}
+
+sat.df <- cbind.data.frame(sat.dist, sat.gen, mag)
+colnames(sat.df) <- c("distance", "fst", "mag")
+
+a <- ggplot(data=sat.df, aes(x=distance, y=fst, size = mag)) +
+  theme_classic() +
+  labs(size = "delta(n)") +
+  geom_smooth(method="lm", se=FALSE, color = "black", linetype="dashed") +
+  geom_point(fill="#B578EC",color="black",alpha=0.7,pch=21)
+
+b <- ggplot(data=sat.df, aes(x=mag, y=fst, size=distance)) +
+  theme_classic() +
+  labs(size = "distance") +
+  geom_smooth(method="lm", se=FALSE, color = "black", linetype="dashed") +
+  geom_point(fill="#B578EC",color="black",alpha=0.7,pch=21) +
+  xlab("delta(n)")
+
+a + b
+
+mod1 <- lm(fst ~ distance, data=sat.df) 
+mod2 <- lm(fst ~ mag, data=sat.df) 
+summary(mod1)
+summary(mod2)
+
+
+
+
 
 
 
