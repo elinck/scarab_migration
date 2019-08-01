@@ -442,3 +442,14 @@ k
 
 This still looks a lot like panmixia, but this will be useful going forward, as we know we won't be violating model assumptions for future analyses (at least except for *D. speciocissimum*, which we'll have to deal with later). 
 
+## Testing for isolation by environment
+
+Next, we're going to use [Bradburd et al.'s BEDASSLE](http://www.genescape.org/bedassle.html) to estimate the relative contribution of isolation by environment and isolation by distance  to genetic differentiaiton. For this analysis, we'll need to trim all our SNPs trim our SNPs for LD, which we'll do on the raw .vcf files using [bcftools](https://samtools.github.io/bcftools/) and r^2^ value of 0.6: 
+
+```{bash, eval=FALSE}
+bcftools +prune -l 0.6 -w 1000 d_satanas_filtered.FIL.recode.vcf -Ov -o d_satanas.LD.vcf
+bcftools +prune -l 0.6 -w 1000 d_spec_filtered.FIL.recode.vcf -Ov -o d_spec.LD.vcf
+bcftools +prune -l 0.6 -w 1000 d_tess_filtered.FIL.recode.vcf -Ov -o d_tess.LD.vcf
+bcftools +prune -l 0.6 -w 1000 d_pod_filtered.FIL.recode.vcf -Ov -o d_pod.LD.vcf
+bcftools +prune -l 0.6 -w 1000 e_affin_filtered.FIL.recode.vcf -Ov -o e_affin.LD.vcf
+```
