@@ -106,7 +106,7 @@ satanas.env <- as.matrix(env.dist.upper)
 colnames(satanas.env) <- NULL
 rownames(satanas.env) <- NULL
 
-# run MCMC for 100K gens
+# run MCMC for 10K gens
 MCMC(   
   counts = satanas.ac,
   sample_sizes = satanas.n,
@@ -154,13 +154,13 @@ spec.gen <- vcfR2genind(spec.vcf)
 md <- propTyped(spec.gen, by=c("both")) # confirm we have expected amount of missing data
 table(md)[1]/table(md)[2] # proportion of missing sites
 table(spec.gen@tab)
-rownames(spec.gen@tab)[23] <- "YY2150_132" # correct dDocent filename issue
 spec.pops <-  gsub( "_.*$", "", rownames(spec.gen@tab)) # add pops
 spec.gen@pop <- as.factor(spec.pops) # make factor
 spec.b <- genind2genpop(spec.gen, spec.pops) # turn into gen pop
 
 # convert to BEDASSLE format
 spec.ac <- as.matrix(spec.b@tab)
+spec.ac <- spec.ac[-1,]
 del <- seq(2, ncol(spec.ac), 2) # sequence of integers to drop non-ref allele
 spec.ac <- spec.ac[,-del] 
 dim(spec.ac[,complete.cases(t(spec.ac))])
@@ -171,9 +171,10 @@ spec.n <- matrix(nrow=nrow(spec.ac), ncol=ncol(spec.ac))
 # name our rows the same thing
 rownames(spec.n) <- rownames(spec.ac)
 
-# get sample size per population - manually because of relabeling order issue
-table(spec.gen@pop) 
-sample.sizes <- c(1,5,6,10,2,8,9,6)
+# get sample size per population
+table(spec.gen@pop)
+sample.sizes <- as.vector(table(spec.gen@pop))
+sample.sizes <- sample.sizes[-1] # drop pop w/ only one individual
 
 # populate each row of matrix with sample sizes for pops
 for(i in 1:nrow(spec.n)){
@@ -186,11 +187,10 @@ spec.p.fst.all <- calculate.all.pairwise.Fst(spec.ac, spec.n)
 
 # look at global Fst
 spec.p.fst <- calculate.pairwise.Fst(spec.ac, spec.n)
-drop.pop <- c("800","925","1050","1175")
+drop.pop <- c("800","925","1050","1175","1575","Macucaloma","Yanayacu")
 
 # drop levels and calc distance
 pop.loc.spec <- pop.loc[!pop.loc$pop %in% drop.pop,]
-pop.loc.spec <- pop.loc.spec[c(1,2,3,4,8,5,6,7),] # reorder rows 
 droplevels(pop.loc.spec)
 spec.geo <- earth.dist(pop.loc.spec[c("long", "lat")], dist = FALSE)
 
@@ -204,7 +204,10 @@ spec.df$species <- rep("deltochilum_speciocissimum",nrow(spec.df))
 colnames(spec.df) <- c("distance", "fst", "species")
 
 # prep dist matrix
+drop.pop <- c("800","925","1050","1175","HU-1575","Macucaloma","Yanayacu")
 spec.env <- as.matrix(env.dist.upper)
+spec.env <- spec.env[!rownames(spec.env) %in% drop.pop,]
+spec.env <- spec.env[,!colnames(spec.env) %in% drop.pop]
 colnames(spec.env) <- NULL
 rownames(spec.env) <- NULL
 
@@ -214,7 +217,7 @@ MCMC(
   sample_sizes = spec.n,
   D = spec.geo,  # geographic distances
   E = spec.env,  # environmental distances
-  k = 8, loci = 23965,  # dimensions of the data
+  k = 5, loci = 6899,  # dimensions of the data
   delta = 0.0001,  # a small, positive, number
   aD_stp = 0.1,   # step sizes for the MCMC
   aE_stp = 0.1,
@@ -526,7 +529,7 @@ MCMC(
   sample_sizes = affin.n,
   D = affin.geo,  # geographic distances
   E = affin.env,  # environmental distances
-  k = 4, loci = 527,  # dimensions of the data
+  k = 4, loci = 329,  # dimensions of the data
   delta = 0.0001,  # a small, positive, number
   aD_stp = 0.1,   # step sizes for the MCMC
   aE_stp = 0.1,
@@ -567,15 +570,15 @@ fst.df <- rbind.data.frame(sat.df, spec.df, tess.df, pod.df, affin.df)
 write.csv(fst.df, file="~/Dropbox/scarab_migration/data/fst_dist_species.csv")
 
 # violin plots for aE/aD
-
+sat.bed.df <- sat.bed.df[sat.bed.df$ratio<100,]
 bed.df <- rbind.data.frame(sat.bed.df, spec.bed.df, tess.bed.df, pod.bed.df, affin.bed.df)
 ggplot(bed.df, aes(x=ratio, fill=species)) + 
   theme_classic() +
-  geom_density(alpha=0.6) +
+  geom_histogram(alpha=0.6, binwidth = 0.25) +
   theme(axis.text.x = element_text(angle = 60, hjust = 1, size=9)) +
   scale_fill_manual(values=wes_palette(n=5, name="FantasticFox1")) +
-  xlim(-1,9) +
-  ylim(0,3.5) +
+  xlim(0,20) +
+  ylim(0,2000) +
   xlab("aE/aD ratio")
 
 
