@@ -226,18 +226,29 @@ j
 
 ### plot all with faceting
 master.df <- rbind.data.frame(satanas.pc,spec.pc,tess.pc,pod.pc,affin.pc)
+master.df$species.x <- as.factor(master.df$species.x)
+master.df$species.x <- tolower(master.df$species.x)
+master.df$species.x <- factor(master.df$species.x,levels=c("eurysternus_affin","dichotomius_podalirius",
+                                                 "deltochilum_tesselatum","deltochilum_speciocissimum","dichotomius_satanas"))
+
 
 k <- ggplot(data=master.df,aes(x=PC1,y=PC2,col=master.df$pop)) + 
-  theme_classic() +
+  theme_bw() +
   geom_jitter()+
-  scale_color_manual(values=pal,name="locality") +
-  facet_wrap(~species.x, scales="free")
+  scale_color_wes(name="locality") +
+  facet_wrap(~species.x, scales="free") +
+  theme(
+    strip.background = element_blank(),
+    panel.grid = element_blank()) 
 
 l <- ggplot(data=master.df,aes(x=elevation,y=PC1,col=master.df$pop)) + 
-  theme_classic() +
-  geom_jitter()+
-  scale_color_manual(values=pal,name="locality") +
-  facet_wrap(~species.x, scales="free")
+  theme_bw() +
+  geom_jitter(size=2.5)+
+  scale_color_wes(name="locality") +
+  facet_wrap(~species.x, scales="free") +
+  theme(
+    strip.background = element_blank(),
+    panel.grid = element_blank()) 
 
 k 
 

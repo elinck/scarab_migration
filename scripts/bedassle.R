@@ -570,17 +570,42 @@ fst.df <- rbind.data.frame(sat.df, spec.df, tess.df, pod.df, affin.df)
 write.csv(fst.df, file="~/Dropbox/scarab_migration/data/fst_dist_species.csv")
 
 # violin plots for aE/aD
-sat.bed.df <- sat.bed.df[sat.bed.df$ratio<100,]
+load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/satanas_MCMC_output1.Robj", verbose = FALSE)
+sat.ratio <- aE/aD %>% as.data.frame()
+sat.bed.df <- cbind.data.frame(sat.ratio, rep("dichotomius_satanas", nrow(sat.ratio)))
+colnames(sat.bed.df) <- c("ratio","species")
+
+load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/spec_MCMC_output1.Robj", verbose = FALSE)
+spec.ratio <- aE/aD %>% as.data.frame()
+spec.bed.df <- cbind.data.frame(spec.ratio, rep("deltochilum_speciocissimum", nrow(spec.ratio)))
+colnames(spec.bed.df) <- c("ratio","species")
+
+load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/tess_MCMC_output1.Robj", verbose = FALSE)
+tess.ratio <- aE/aD %>% as.data.frame()
+tess.bed.df <- cbind.data.frame(tess.ratio, rep("deltochilum_tesselatum", nrow(tess.ratio)))
+colnames(tess.bed.df) <- c("ratio","species")
+
+load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/tess_MCMC_output1.Robj", verbose = FALSE)
+pod.ratio <- aE/aD %>% as.data.frame()
+pod.bed.df <- cbind.data.frame(pod.ratio, rep("dichotomius_podalirius", nrow(pod.ratio)))
+colnames(pod.bed.df) <- c("ratio","species")
+
+load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/affin_MCMC_output1.Robj", verbose = FALSE)
+affin.ratio <- aE/aD %>% as.data.frame()
+affin.bed.df <- cbind.data.frame(affin.ratio, rep("eurysternus_affin", nrow(affin.ratio)))
+colnames(affin.bed.df) <- c("ratio","species")
+
 bed.df <- rbind.data.frame(sat.bed.df, spec.bed.df, tess.bed.df, pod.bed.df, affin.bed.df)
-ggplot(bed.df, aes(x=ratio, fill=species)) + 
-  theme_classic() +
-  geom_histogram(alpha=0.6, binwidth = 0.25) +
-  theme(axis.text.x = element_text(angle = 60, hjust = 1, size=9)) +
+bed.df$species <- factor(bed.df$species,levels=c("eurysternus_affin","dichotomius_podalirius",
+                                                 "deltochilum_tesselatum","deltochilum_speciocissimum","dichotomius_satanas"))
+ggplot(bed.df, aes(y=ratio, fill=species)) + 
+  theme_bw() +
+  geom_boxplot(alpha=0.6, binwidth = 0.25) +
+  theme(axis.text.x = element_blank()) +
   scale_fill_manual(values=wes_palette(n=5, name="FantasticFox1")) +
-  xlim(0,20) +
-  ylim(0,2000) +
-  xlab("aE/aD ratio")
-
-
-
+  ylim(0,100) +
+  ylab("aE/aD ratio") +
+  theme(
+    strip.background = element_blank(),
+    panel.grid = element_blank())
 

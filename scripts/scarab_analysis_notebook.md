@@ -44,10 +44,9 @@ libraries by species. First, we’ll read in the (unformatted) stats file
 and select only the information we want:
 
 ``` r
-setwd("~/Dropbox/scarab_migration/ipyrad/")
-file <- "s1_demultiplex_stats.txt"
+file <- "~/Dropbox/scarab_migration/ipyrad/s1_demultiplex_stats.txt"
 nsamples <- 239
-raw <- readLines("s1_demultiplex_stats.txt",warn=FALSE)
+raw <- readLines("~/Dropbox/scarab_migration/ipyrad/s1_demultiplex_stats.txt",warn=FALSE)
 a <- grep("sample_name",raw) # where the data begins
 a <- a[1] 
 reads <- read.table(file,skip=(a),nrow=(nsamples))
@@ -187,6 +186,7 @@ levels(localities$locality) # see levels
 
 ``` r
 localities$transect <- ifelse(grepl("CC",localities$locality),'colonso','pipeline') # add levels for transects
+localities$population <-  as.factor(gsub( "_.*$", "", localities$ddocent_ID)) # add pops
 
 # pick the center point for our maps, and an appropriate zoom level
 pipeline <- get_map(location=c(lon=-77.85, lat=-0.615), zoom = 13, color = "bw")
@@ -203,13 +203,20 @@ palette so we can hold colors constant across the levels of our sampling
 localities.
 
 ``` r
-pal <- wes_palette("Darjeeling1", 14, type = "continuous")
+scale_fill_wes <- function(...){
+  ggplot2:::manual_scale(
+    'fill', 
+    values = setNames(wes_palette("Darjeeling1", 13, type = "continuous"), levels(localities$population)), 
+    ...
+  )
+}
+
 scale_color_wes <- function(...){
-    ggplot2:::manual_scale(
-        'color', 
-        values = setNames(pal, levels(localities$short_locality)), 
-        ...
-    )
+  ggplot2:::manual_scale(
+    'color', 
+    values = setNames(wes_palette("Darjeeling1", 13, type = "continuous"), levels(localities$population)), 
+    ...
+  )
 }
 ```
 
@@ -217,7 +224,9 @@ Now, we’ll plot these using [ggmap](https://github.com/dkahle/ggmap).
 
 ![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
-Not quite publication quality, but good enough for now.
+The scaling is weird because of the constraints of the document but
+you’ll have to trust me it’s looking good. Or at least about as good
+as we’re going to get given where we’re working\!
 
 ## Testing for genetic differentiation
 
@@ -416,7 +425,7 @@ affin.pc$species <- rep("Eurysternus_affin",nrow(affin.pc))
 affin.pc <- merge(affin.pc, localities, by.x = "sample", by.y = "ddocent_ID")
 
 # merge all data frames
-master.df <- rbind.data.frame(satanas.pc,spec.pc,tess.pc,pod.pc,affin.pc)
+master.pc.df <- rbind.data.frame(satanas.pc,spec.pc,tess.pc,pod.pc,affin.pc)
 ```
 
 Now’ let’s plot all these together with faceting.
@@ -555,9 +564,32 @@ melted_affin$pop.x <- gsub( "_.*$", "", melted_affin$Var1) %>% as.factor()
 melted_affin$pop.y <- gsub( "_.*$", "", melted_affin$Var2) %>% as.factor()
 ```
 
+One issue with the data in its current form is “coancestry” takes on
+different values for different species. We’ll add a statistic for
+“relative coancestry,” scaled by the maximum value for each species.
+We’ll also prepare the dataset for faceting.
+
+``` r
+melted_satanas$relative_coancestry <- melted_satanas$value/max(melted_satanas$value)
+melted_spec$relative_coancestry <- melted_spec$value/max(melted_spec$value)
+melted_tess$relative_coancestry <- melted_tess$value/max(melted_tess$value)
+melted_pod$relative_coancestry <- melted_pod$value/max(melted_pod$value)
+melted_affin$relative_coancestry <- melted_affin$value/max(melted_affin$value)
+
+melted_satanas$species <- rep("dichotomius_satanas", nrow(melted_satanas))
+melted_spec$species <- rep("deltochilum_speciocissimum", nrow(melted_spec))
+melted_tess$species <- rep("deltochilum_tesselatum", nrow(melted_tess))
+melted_pod$species <- rep("dichotomius_podalirius", nrow(melted_pod))
+melted_affin$species <- rep("eurysternus_affin", nrow(melted_affin))
+
+melted.coanc.df <- rbind.data.frame(melted_satanas,melted_spec,melted_tess,melted_pod,melted_affin)
+melted.coanc.df$species <- factor(melted.coanc.df$species,levels=c("eurysternus_affin","dichotomius_podalirius",
+                                                           "deltochilum_tesselatum","deltochilum_speciocissimum","dichotomius_satanas"))
+```
+
 Then, we plot our coancestry matrices:
 
-![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
+![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
 
 I left off axis labels because it made the figure too chaotic, but
 essentially what we’re looking for here are contiguous chunks of similar
@@ -737,7 +769,7 @@ satanas.p.fst
     ## [1] 0.01347148
 
 Some negative values, which are an artifact of how BEDASSLE uses Weir
-and Hill’s \(\theta\) as our estimator but generally confirms we have no
+and Hill’s theta as our estimator but generally confirms we have no
 subdivision among our populations.
 
 Now, we need restrict our geographic distance matrix to only those
@@ -819,7 +851,7 @@ play with.
     ## [25] "aD_stp"        "aE_stp"        "a2_stp"        "thetas_stp"   
     ## [29] "mu_stp"
 
-![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-40-1.png)<!-- -->![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-40-2.png)<!-- -->![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-40-3.png)<!-- -->![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-40-4.png)<!-- -->![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-40-5.png)<!-- -->
+![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-41-1.png)<!-- -->![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-41-2.png)<!-- -->![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-41-3.png)<!-- -->![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-41-4.png)<!-- -->![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-41-5.png)<!-- -->
 
 While it certainly didn’t converge, it’s headed in the right direction,
 and we can see the posterior is heavily weighted towards the aE/aD ratio
@@ -842,11 +874,298 @@ species, and merge the ratio into a data frame.
 
 Now, let’s check it out.
 
-![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-43-1.png)<!-- -->
+![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-44-1.png)<!-- -->
 
 Again, we’re having some issues with convergence, but the weight of the
 distributions is very low. Mountain passes *aren’t* higher for these
-beetles, at least within their elevation range\! (Next week I’ll
-estimate neighborhood size and effective population size across their
-ranges, and *maybe* do some demographic modeling to confirm what we
-already know.)
+beetles, at least within their elevation range\!
+
+# Estimating Wright’s neighborhood size and theta
+
+Next, we’re going to use Rousset’s (1997) method for estimating Wright’s
+neighborhood size as the slope of a linear regression of fst/(1-fst) by
+the natural log of geographic disance. We already calculated pairwise
+fst values and distances with for all species in our script
+`bedassle.R`, and now we’ll load that, drop negative distances, and
+calculate the natural log of geographic distance:
+
+``` r
+fst.df <- read.csv(file="~/Dropbox/scarab_migration/data/fst_dist_species.csv")[-1]
+fst.df <- fst.df[fst.df$distance>0,]
+fst.df$fst[fst.df$fst<0] <- 0
+fst.df$log_distance <- log2(fst.df$distance)
+fst.df$fst.adj <- fst.df$fst/(1-fst.df$fst)
+head(fst.df)
+```
+
+    ##    distance fst             species log_distance fst.adj
+    ## 2 0.3946041   0 dichotomius_satanas   -1.3415220       0
+    ## 3 0.7499033   0 dichotomius_satanas   -0.4152234       0
+    ## 4 1.7253411   0 dichotomius_satanas    0.7868816       0
+    ## 5 2.1694344   0 dichotomius_satanas    1.1173189       0
+    ## 6 1.6847584   0 dichotomius_satanas    0.7525417       0
+    ## 7 8.5030889   0 dichotomius_satanas    3.0879870       0
+
+Now, we can subset each species out of this dataframe
+
+``` r
+# d. satanas 
+sat.fst <- fst.df[fst.df$species=="dichotomius_satanas",]
+head(sat.fst)
+```
+
+    ##    distance fst             species log_distance fst.adj
+    ## 2 0.3946041   0 dichotomius_satanas   -1.3415220       0
+    ## 3 0.7499033   0 dichotomius_satanas   -0.4152234       0
+    ## 4 1.7253411   0 dichotomius_satanas    0.7868816       0
+    ## 5 2.1694344   0 dichotomius_satanas    1.1173189       0
+    ## 6 1.6847584   0 dichotomius_satanas    0.7525417       0
+    ## 7 8.5030889   0 dichotomius_satanas    3.0879870       0
+
+``` r
+sat.mod <- lm(fst.adj ~ log_distance, sat.fst)
+1/as.vector(sat.mod$coefficients[2]) #[1] Inf
+```
+
+    ## [1] Inf
+
+``` r
+# d. spec
+spec.fst <- fst.df[fst.df$species=="deltochilum_speciocissimum",]
+spec.mod <- lm(fst.adj ~ log_distance, spec.fst)
+1/as.vector(spec.mod$coefficients[2]) 
+```
+
+    ## [1] -6558.657
+
+``` r
+# d. tess
+tess.fst <- fst.df[fst.df$species=="deltochilum_tesselatum",]
+tess.mod <- lm(fst.adj ~ log_distance, tess.fst)
+1/as.vector(tess.mod$coefficients[2]) 
+```
+
+    ## [1] -360.0897
+
+``` r
+# d. pod
+pod.fst <- fst.df[fst.df$species=="dichotomius_podalirius",]
+pod.mod <- lm(fst.adj ~ log_distance, pod.fst)
+1/as.vector(pod.mod$coefficients[2]) 
+```
+
+    ## [1] -Inf
+
+``` r
+# e. affin
+affin.fst <- fst.df[fst.df$species=="eurysternus_affin",]
+affin.mod <- lm(fst.adj ~ log_distance, affin.fst)
+1/as.vector(affin.mod$coefficients[2])
+```
+
+    ## [1] -68.55046
+
+In all cases, the slope of our regression is negative, which results in
+an estimate of Wright’s NS which is more or less infinite, and
+consistent with panmixia (at least as inferred from our restricted
+sampling.) Not terrible surprising, but good to know.
+
+A natural follow up question is trying to understand how genetic
+diversity changes across elevation in our species, as this can tell us
+something about the nature of their elevational range limits, e.g. that
+they either are or are not affected by declining habitat quality or edge
+effects. We’ll use the
+[pegas](https://cran.r-project.org/web/packages/pegas/index.html)
+package to estimate theta (the product of the effective population size
+and the neutral mutation rate) using mean homozygosity from gene
+frequencies.
+
+We’ll have to read in our .vcf files again, manipulate them into the
+right format, and run a loop over each RAD locus to generate more or
+less independent estimates from across the genome. We’re going to use
+our non-LD trimmed dataset, as having more SNPs per locus will improve
+accuracy for each point. Here’s an example from *D. satanas*; I’ll leave
+the remainder for inspection in the `stats.R` file, and load the
+processed data matrix to save computational time.
+
+``` r
+# d. satanas
+satanas.vcf <- read.vcfR("raw_data/d_satanas_filtered.FIL.recode.vcf", convertNA=TRUE)
+satanas.gen <- vcfR2genind(satanas.vcf) 
+satanas.pops <-  gsub( "_.*$", "", rownames(satanas.gen@tab)) # add pops
+satanas.gen@pop <- as.factor(satanas.pops) 
+sat.S <- as.loci(satanas.gen) # turn into locus object for pegas 
+
+satlist <- list() # empty list to fill with results
+pops <- levels(sat.S$population)
+for(i in pops){ # loop over populations and estimate theta for each allele 
+  tmp <- sat.S[which(sat.S$population==i),]
+  sum.tmp <- summary(tmp)
+  tmp.theta <- as.vector(sapply(sum.tmp, function(x) theta.h(x$allele)))
+  tmp.df <- cbind.data.frame(tmp.theta, rep(i, length(tmp.theta)))
+  colnames(tmp.df) <- c("theta", "population")
+  satlist[[i]] <- tmp.df
+}
+
+sat.df <- do.call(rbind, satlist) # create dataframe
+sat.df <- sat.df[sat.df$theta>0,]
+sat.df$species <- rep("dichotomius_satanas",nrow(sat.df)) # prepare to merge with other results eventually
+colnames(sat.df) <- c("theta", "population","species")
+```
+
+There are a few tweaks for the idiosyncrasies of other species, but
+that’s basically it. Let’s load the final dataset from file:
+
+``` r
+master.df <- read.csv("~/Dropbox/scarab_migration/data/master.theta.df.csv")[-1]
+head(master.df)
+```
+
+    ##       theta population             species elevation
+    ## 1 0.3818161       1575 dichotomius_satanas      1575
+    ## 2 0.3780009       1575 dichotomius_satanas      1575
+    ## 3 0.3818161       1575 dichotomius_satanas      1575
+    ## 4 0.3818161       1575 dichotomius_satanas      1575
+    ## 5 0.3818161       1575 dichotomius_satanas      1575
+    ## 6 0.3818161       1575 dichotomius_satanas      1575
+
+We can see columns for the theta value of each species, the name of the
+population, and an elevation. Each row is an estimate from a different
+RAD locus. Let’s plot these, along with the relationship between the
+natural log of geographic distance and adjusted fst values.
+
+    ## 
+    ## Attaching package: 'cowplot'
+
+    ## The following object is masked from 'package:ggmap':
+    ## 
+    ##     theme_nothing
+
+    ## The following object is masked from 'package:ggplot2':
+    ## 
+    ##     ggsave
+
+![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-49-1.png)<!-- -->
+
+We can see that theta doesn’t really change across elevation, and
+there’s no (positive) relationship between differentiation and
+distance. Taking all these results together, the last outstanding
+question is whether elevational ranges are at equilibrium, something
+this results certainly suggest and something that would tell us about
+the limits of Janzen’s predictions in this dataset. We’ll test this with
+demographic modeling using approximate Bayesian computation (ABC).
+
+First, we need to createa a .vcf file without distortions to the SFS.
+We’ll return to the raw .vcf for each species, and again apply a
+series of filtering steps, but avoid anything that affects the SFS,
+e..g. minor allele frequency filters.
+
+``` bash
+vcftools --vcf d_satanas.raw.vcf --max-missing 0.75 --minQ 30 --minDP 3 --min-meanDP 5 --remove lowDP.indv --recode --recode-INFO-all --out d.satanas.abc 
+bash dDocent_filters d.satanas.abc.recode.vcf d.satanas.abc
+
+vcftools --vcf d_spec.raw.vcf --max-missing 0.75 --minQ 30 --minDP 3 --min-meanDP 5 --remove lowDP.indv --recode --recode-INFO-all --out d.spec.abc 
+bash dDocent_filters d.spec.abc.recode.vcf d.spec.abc
+
+vcftools --vcf d_tess.raw.vcf --max-missing 0.75 --minQ 30 --minDP 3 --min-meanDP 5 --remove lowDP.indv --recode --recode-INFO-all --out d.tess.abc 
+bash dDocent_filters d.tess.abc.recode.vcf d.tess.abc
+
+vcftools --vcf d_pod.raw.vcf --max-missing 0.75 --minQ 30 --minDP 3 --min-meanDP 5 --remove lowDP.indv --recode --recode-INFO-all --out d.pod.abc 
+bash dDocent_filters d.pod.abc.recode.vcf d.pod.abc
+
+vcftools --vcf e_affin.raw.vcf --max-missing 0.75 --minQ 30 --minDP 3 --min-meanDP 5 --remove lowDP.indv --recode --recode-INFO-all --out e.affin.abc 
+bash dDocent_filters e.affin.abc.recode.vcf e.affin.abc
+
+mkdir abc
+cp d_satanas/filtering/*.abc.FIL.recode.vcf abc/
+cp d_speciocissimum/filtering/*.abc.FIL.recode.vcf abc/
+cp d_tesselatum/filtering/*.abc.FIL.recode.vcf abc/
+cp d_podalirius/filtering/*.abc.FIL.recode.vcf abc/
+cp e_affin/filtering/*.abc.FIL.recode.vcf abc/
+```
+
+Now that we have appropriately treated .vcf files, we’re going to test
+whether our five species have undergone recent range expansion
+(e.g. upslope or downslope) using an [approximate Bayesian computation
+(ABC) approach](https://www.genetics.org/content/162/4/2025). We’ll use
+the [coala](https://github.com/statgenlmu/coala) (coalescent simulator
+wrapper) and
+[abc](https://cran.r-project.org/web/packages/abc/index.html) R packages
+to do this, and manually calculate the site frequency spectrum for each
+species to use as a summary statistic. As with BEDASSLE, I’m only going
+to show the code for the first species as the rest will be repetitive,
+but it’s all available in `scripts/abc.R`.
+
+``` r
+library(coala)
+library(abc)
+
+# calculate SFS from data
+satanas.vcf <- read.vcfR("~/Dropbox/scarab_migration/raw_data/d.satanas.abc.FIL.recode.vcf", convertNA=TRUE)
+satanas.gen <- vcfR2genlight(satanas.vcf) 
+sat.sfs <- table(glSum(satanas.gen))
+sat.sfs <- as.vector(sat.sfs[1:98])
+
+# define two models
+sat.null.model <- coal_model(99, 50, 3) +
+  feat_mutation(par_prior("theta", runif(1, 1, 6))) +
+  sumstat_sfs()
+
+sat.growth.model <- coal_model(99, 50, 3) +
+  feat_mutation(par_prior("theta", runif(1, 1, 6))) +
+  feat_growth(par_prior("r", runif(1, 0, 1))) +
+  sumstat_sfs()
+
+# simulate data
+sat.null.sim <- simulate(sat.null.model, nsim = 2000, seed = 69)
+sat.growth.sim <- simulate(sat.growth.model, nsim = 2000, seed = 32)
+
+# create params and sumstts for abc
+sat.null.param <- create_abc_param(sat.null.sim, sat.null.model)
+sat.null.sumstat <- create_abc_sumstat(sat.null.sim, sat.null.model)
+sat.growth.param <- create_abc_param(sat.growth.sim, sat.growth.model)
+sat.growth.sumstat <- create_abc_sumstat(sat.growth.sim, sat.growth.model)
+
+# look at posterior distributions of params
+sat.null.post <- abc(sat.sfs, sat.null.param, sat.null.sumstat, 0.05, method = "rejection")
+sat.growth.post <- abc(sat.sfs, sat.growth.param, sat.growth.sumstat, 0.05, method = "rejection")
+
+# prep data for model 
+sat.sumstat.merge <- rbind(sat.null.sumstat, sat.growth.sumstat)
+sat.index <- c(rep("null",2000),rep("growth",2000))
+
+# check ability to distinguish models
+sat.cv.modsel <- cv4postpr(sat.index, sat.sumstat.merge, nval=5, tols=c(.05,.1), method="rejection")
+summary(sat.cv.modsel)
+
+# model test
+sat.model <- postpr(target=sat.sfs, sumstat=sat.sumstat.merge, index=as.vector(sat.index), tol=.05, method="rejection")
+summary(sat.model)
+
+# prep dataframe
+sat.growth.plot <- as.data.frame(sat.growth.post$unadj.values)
+sat.growth.theta <- cbind.data.frame(sat.growth.plot$theta, rep("theta", nrow(sat.growth.plot)))
+colnames(sat.growth.theta) <- c("value","param")
+sat.growth.r <- cbind.data.frame(sat.growth.plot$r, rep("r", nrow(sat.growth.plot)))
+colnames(sat.growth.r) <- c("value","param")
+sat.growth.df <- rbind.data.frame(sat.growth.theta,sat.growth.r)
+sat.growth.df$species <- rep("dichotomius_satanas", nrow(sat.growth.df))
+```
+
+We’ve calculated Bayes Factors for the support of different model
+comparisons (e.g. null model:exponential growth; there are four in
+total), and the posterior probabilities of parameter values for both.
+
+Let’s read the results for all species, and plot them all together.
+We’ll use our usual species order. First, the dataframe manipulation.
+
+Now, the plotting:
+
+![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-53-1.png)<!-- -->![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-53-2.png)<!-- -->
+
+In all but one compairson (for *E. affin*; you read these matrices as
+the Bayes Factor value for model comparisons from the x axis to the y
+axis), the null model is much more strongly supported. And when we force
+a model of exponential growth, the growth parameter’s (r) value is very
+low. In other words, it seems like elevational ranges are at
+equilibrium.

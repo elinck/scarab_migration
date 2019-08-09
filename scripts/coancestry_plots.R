@@ -157,5 +157,39 @@ e <- ggplot(data = melted_affin, aes(x=Var1, y=Var2, fill=value)) +
 
 plot_grid(a, b, c, d, e, labels = "AUTO", align = 'h', label_size = 12, nrow = 2, label_x = 0.5)
 
+melted_satanas$relative_coancestry <- melted_satanas$value/max(melted_satanas$value)
+melted_spec$relative_coancestry <- melted_spec$value/max(melted_spec$value)
+melted_tess$relative_coancestry <- melted_tess$value/max(melted_tess$value)
+melted_pod$relative_coancestry <- melted_pod$value/max(melted_pod$value)
+melted_affin$relative_coancestry <- melted_affin$value/max(melted_affin$value)
+
+melted_satanas$species <- rep("dichotomius_satanas", nrow(melted_satanas))
+melted_spec$species <- rep("deltochilum_speciocissimum", nrow(melted_spec))
+melted_tess$species <- rep("deltochilum_tesselatum", nrow(melted_tess))
+melted_pod$species <- rep("dichotomius_podalirius", nrow(melted_pod))
+melted_affin$species <- rep("eurysternus_affin", nrow(melted_affin))
+
+melted.coanc.df <- rbind.data.frame(melted_satanas,melted_spec,melted_tess,melted_pod,melted_affin)
+melted.coanc.df$species <- factor(melted.coanc.df$species,levels=c("eurysternus_affin","dichotomius_podalirius",
+                                                           "deltochilum_tesselatum","deltochilum_speciocissimum","dichotomius_satanas"))
+
+l <- ggplot(data=melted.coanc.df,aes(x=Var1, y=Var2, fill=relative_coancestry)) + 
+  theme_bw() +
+  geom_tile() +
+  xlab(element_blank())+
+  ylab(element_blank())+
+  scale_fill_gradient(name = "coancestry",
+                      low = "#FFFFFF",
+                      high = "#BA4A00") +
+  facet_wrap(~species, scales="free") +
+  theme(
+    strip.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank()) 
+
+
+
+
 
 
