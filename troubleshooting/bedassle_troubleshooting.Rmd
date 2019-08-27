@@ -1,0 +1,158 @@
+---
+title: "BEDASSLE troubleshooting"
+output: rmarkdown::github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Here's a reproducible example of the trouble I'm having getting reasonable acceptance rates for the αE and α2 parameters, using a representative example from our five focal species (extremely low global FST / panmixia across all sampling localities). All the necessary data should be in this folder; you'll have to change paths. First, I'll load libraries and our locality data:
+
+```{r, message=FALSE}
+library(adegenet)
+library(BEDASSLE)
+library(dplyr)
+library(fossil)
+library(ecodist)
+library(vcfR)
+library(raster)
+
+# read in locality data
+localities <- read.csv("/Users/ethanlinck/Dropbox/scarab_migration/troubleshooting/scarab_spp_master.csv")
+localities$short_locality[which(localities$short_locality=="730")] <- 800 # correct locality assignment error
+pop.loc <- cbind.data.frame(unique(localities$long),unique(localities$lat),unique(localities$short_locality))
+colnames(pop.loc) <- c("long", "lat", "pop")
+geodist <- earth.dist(pop.loc[c("long", "lat")], dist = FALSE)
+```
+
+Next, I'll download environmental data for our sampling localities from worldclim, create a distance matrix using elevation, precipitation, and MAT as variables, and bind this to our locality data:
+
+```{r}
+# calculate environmental distance
+worldclim <- getData("worldclim",var="bio",res=0.5,lon=localities$long[1],lat=localities$lat[1])
+proj <- as.character(worldclim[[2]]@crs)
+worldclim <- worldclim[[c(1,12)]]
+names(worldclim) <- c("temp","precip")
+sp1 <- SpatialPoints(localities[,c('long', 'lat')], proj4string=CRS(proj))
+values <- extract(worldclim, sp1)
+loc.master <- cbind.data.frame(localities, values)
+loc.uniq <- cbind.data.frame(loc.master$locality, loc.master$elevation, loc.master$temp,
+                             loc.master$precip) %>% distinct()
+colnames(loc.uniq) <- c("population", "elevation", "temp", "precip")
+rownames(loc.uniq) <- loc.uniq$population
+loc.uniq <- as.data.frame(loc.uniq)
+loc.uniq <- loc.uniq[,-which(names(loc.uniq) %in% c("population"))]
+env.dist.all <- dist(loc.uniq, diag = TRUE, upper = TRUE)
+
+# drop lower transect
+loc.subset <- loc.uniq[-which(rownames(loc.uniq) %in% 
+                                       c("CC1-800","CC2-925","CC3-1050","CC4-1175","CC1-730")),]
+env.dist.upper <- dist(loc.subset, diag = TRUE, upper = TRUE)
+
+# prep dist matrix
+satanas.env <- as.matrix(env.dist.upper)
+colnames(satanas.env) <- NULL
+rownames(satanas.env) <- NULL
+```
+
+I'll then load a stringently filtered, LD-trimmed .vcf file for *Dichotomius satanas* and convert it to BEDASSLE's input format:
+
+```{r, message=FALSE}
+# read in .vcf, turn to genpop
+satanas.vcf <- read.vcfR("/Users/ethanlinck/Dropbox/scarab_migration/troubleshooting/d_satanas.LD.vcf", convertNA=TRUE)
+satanas.gen <- vcfR2genind(satanas.vcf) 
+satanas.pops <-  gsub( "_.*$", "", rownames(satanas.gen@tab)) # add pops
+satanas.gen@pop <- as.factor(satanas.pops) # make factor
+satanas.b <- genind2genpop(satanas.gen, satanas.pops) # turn into genpop
+
+# convert to BEDASSLE format
+satanas.ac <- as.matrix(satanas.b@tab)
+del <- seq(2, ncol(satanas.ac), 2) # sequence of integers to drop non-ref allele
+satanas.ac <- satanas.ac[,-del] 
+
+# create equally sized matrix for sample sizes
+satanas.n <- matrix(nrow=nrow(satanas.ac), ncol=ncol(satanas.ac))
+
+# name our rows the same thing
+rownames(satanas.n) <- rownames(satanas.ac)
+
+# get sample size per population
+sample.n <- table(satanas.gen@pop) 
+
+# turn this into a vector
+sample.sizes <- as.vector(sample.n)
+
+# populate each row of matrix with sample sizes for pops
+for(i in 1:nrow(satanas.n)){
+  satanas.n[i,] <- sample.sizes[i]
+}
+satanas.n <- satanas.n*2 # adjust to account for loss of one allele
+
+# calculate pairwise Fst
+satanas.p.fst.all <- calculate.all.pairwise.Fst(satanas.ac, satanas.n)
+
+# look at global Fst
+satanas.p.fst <- calculate.pairwise.Fst(satanas.ac, satanas.n)
+drop.pop <- c("800","925","1050","1175") # drop levels from the other transect
+
+# drop levels and calc distance
+pop.loc.sat <- pop.loc[!pop.loc$pop %in% drop.pop,]
+droplevels(pop.loc.sat)
+satanas.geo <- earth.dist(pop.loc.sat[c("long", "lat")], dist = FALSE)
+
+# turn to vectors
+sat.dist <- as.vector(satanas.geo)
+sat.gen <- as.vector(satanas.p.fst.all)
+
+# make data frame with these variables
+sat.df <- cbind.data.frame(sat.dist, sat.gen)
+sat.df$species <- rep("dichotomius_satanas",nrow(sat.df))
+colnames(sat.df) <- c("distance", "fst", "species")
+```
+
+Finally, a short run to demonstate what's going on. I've put in step sizes that seem to be performing the best after extensive testing. They alternative produce acceptance rates for αE and α2 that are very close to 1 or 0.
+
+```{r, message=FALSE}
+MCMC(   
+  counts = satanas.ac,
+  sample_sizes = satanas.n,
+  D = satanas.geo,  # geographic distances
+  E = satanas.env,  # environmental distances
+  k = nrow(satanas.ac), loci = ncol(satanas.ac),  # dimensions of the data
+  delta = 0.0001,  # a small, positive, number
+  aD_stp = 0.6,   # step sizes for the MCMC
+  aE_stp = 0.0685,
+  a2_stp = 0.0665,
+  thetas_stp = 0.2,
+  mu_stp = 0.35,
+  ngen = 50000,        # number of steps (2e6)
+  printfreq = 250,  # print progress (10000)
+  savefreq = 250,     # save out current state
+  samplefreq = 2,     # record current state for posterior (2000)
+  prefix = "/Users/ethanlinck/Dropbox/scarab_migration/bedassle/satanas_test_",   # filename prefix
+  continue=FALSE,
+  continuing.params=NULL)
+
+# check shit out
+show(load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/satanas_test_MCMC_output1.Robj"))
+layout(t(1:2))
+plot(aD, xlab="MCMC generation", ylab="value", main="aD")
+plot((aD_accept/aD_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
+plot(as.vector(aE)[-(1:40)], xlab="MCMC generation", ylab="value", main="aE")
+plot((aE_accept/aE_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
+plot(a2[-(1:40)], xlab="MCMC generation", ylab="value", main="a2")
+plot((a2_accept/a2_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
+plot(Prob[-(1:40)], xlab="MCMC generation", main="log likelihood")
+plot((mu_accept/mu_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
+plot((thetas_accept/thetas_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
+hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
+hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
+mean(aE/aD)
+sd(aE/aD)
+```
+
+Thoughts? My hunch is that there is extremely little signal of either IBE or IBD in our data, but I don't understand the MCMC procedure well enough to have an intuitive grasp of how this would show up in our posterior probability distributions. 
+
+
+
