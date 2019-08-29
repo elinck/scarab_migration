@@ -106,6 +106,44 @@ satanas.env <- as.matrix(env.dist.upper)
 colnames(satanas.env) <- NULL
 rownames(satanas.env) <- NULL
 
+MCMC(   
+  counts = satanas.ac,
+  sample_sizes = satanas.n,
+  D = satanas.geo,  # geographic distances
+  E = satanas.env,  # environmental distances
+  k = nrow(satanas.ac), loci = ncol(satanas.ac),  # dimensions of the data
+  delta = 0.0001,  # a small, positive, number
+  aD_stp = 0.6,   # step sizes for the MCMC
+  aE_stp = 0.0685,
+  a2_stp = 0.0665,
+  thetas_stp = 0.2,
+  mu_stp = 0.35,
+  ngen = 50000,        # number of steps (2e6)
+  printfreq = 250,  # print progress (10000)
+  savefreq = 250,     # save out current state
+  samplefreq = 2,     # record current state for posterior (2000)
+  prefix = "/Users/ethanlinck/Dropbox/scarab_migration/bedassle/satanas_test_",   # filename prefix
+  continue=FALSE,
+  continuing.params=NULL)
+
+# check shit out
+show(load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/satanas_test_MCMC_output1.Robj"))
+layout(t(1:2))
+plot(aD, xlab="MCMC generation", ylab="value", main="aD")
+plot((aD_accept/aD_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
+plot(as.vector(aE)[-(1:40)], xlab="MCMC generation", ylab="value", main="aE")
+plot((aE_accept/aE_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
+plot(a2[-(1:40)], xlab="MCMC generation", ylab="value", main="a2")
+plot((a2_accept/a2_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
+plot(Prob[-(1:40)], xlab="MCMC generation", main="log likelihood")
+plot((mu_accept/mu_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
+plot((thetas_accept/thetas_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
+hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
+hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
+mean(aE/aD)
+sd(aE/aD)
+
+
 # run MCMC for 10K gens
 MCMC(   
   counts = satanas.ac,
@@ -114,15 +152,15 @@ MCMC(
   E = satanas.env,  # environmental distances
   k = nrow(satanas.ac), loci = ncol(satanas.ac),  # dimensions of the data
   delta = 0.0001,  # a small, positive, number
-  aD_stp = 0.1,   # step sizes for the MCMC
-  aE_stp = 0.1,
-  a2_stp = 0.025,
+  aD_stp = 0.2,   # step sizes for the MCMC
+  aE_stp = 0.25,
+  a2_stp = 0.25,
   thetas_stp = 0.2,
   mu_stp = 0.35,
-  ngen = 10000,        # number of steps (2e6)
-  printfreq = 100,  # print progress (10000)
-  savefreq = 100,     # save out current state
-  samplefreq = 2,     # record current state for posterior (2000)
+  ngen = 1000000,        # number of steps (2e6)
+  printfreq = 250,  # print progress (10000)
+  savefreq = 250,     # save out current state
+  samplefreq = 250,     # record current state for posterior (2000)
   prefix = "/Users/ethanlinck/Dropbox/scarab_migration/bedassle/satanas_",   # filename prefix
   continue=FALSE,
   continuing.params=NULL)
@@ -130,16 +168,19 @@ MCMC(
 # check shit out
 show(load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/satanas_MCMC_output1.Robj"))
 layout(t(1:2))
-plot(aD[-(1:1000)], xlab="MCMC generation", ylab="value", main="aD")
-plot((aD_accept/aD_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
-plot(as.vector(aE)[-(1:1000)], xlab="MCMC generation", ylab="value", main="aE")
-plot((aE_accept/aE_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
-plot(a2[-(1:1000)], xlab="MCMC generation", ylab="value", main="a2")
-plot((a2_accept/a2_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
-plot(Prob[-(1:1000)], xlab="MCMC generation", main="log likelihood")
-plot((mu_accept/mu_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
-plot((thetas_accept/thetas_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
-hist((aE/aD)[-(1:1000)],breaks=100,main="posterior of aE/aD ratio")
+plot(aD, xlab="MCMC generation", ylab="value", main="aD")
+plot((aD_accept/aD_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
+plot(as.vector(aE)[-(1:40)], xlab="MCMC generation", ylab="value", main="aE")
+plot((aE_accept/aE_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
+plot(a2[-(1:40)], xlab="MCMC generation", ylab="value", main="a2")
+plot((a2_accept/a2_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
+plot(Prob[-(1:40)], xlab="MCMC generation", main="log likelihood")
+plot((mu_accept/mu_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
+plot((thetas_accept/thetas_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
+hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
+hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
+mean(aE/aD)
+sd(aE/aD)
 
 # convert for ggplotting
 sat.ratio <- aE/aD %>% as.data.frame()
@@ -217,17 +258,17 @@ MCMC(
   sample_sizes = spec.n,
   D = spec.geo,  # geographic distances
   E = spec.env,  # environmental distances
-  k = 5, loci = 6899,  # dimensions of the data
+  k = 5, loci = 13797,  # dimensions of the data
   delta = 0.0001,  # a small, positive, number
-  aD_stp = 0.1,   # step sizes for the MCMC
-  aE_stp = 0.1,
-  a2_stp = 0.025,
+  aD_stp = 0.2,   # step sizes for the MCMC
+  aE_stp = 0.25,
+  a2_stp = 0.25,
   thetas_stp = 0.2,
   mu_stp = 0.35,
-  ngen = 10000,        # number of steps (2e6)
-  printfreq = 100,  # print progress (10000)
-  savefreq = 100,     # save out current state
-  samplefreq = 2,     # record current state for posterior (2000)
+  ngen = 1000000,        # number of steps (2e6)
+  printfreq = 250,  # print progress (10000)
+  savefreq = 250,     # save out current state
+  samplefreq = 250,     # record current state for posterior (2000)
   prefix = "/Users/ethanlinck/Dropbox/scarab_migration/bedassle/spec_",   # filename prefix
   continue=FALSE,
   continuing.params=NULL)
@@ -235,16 +276,18 @@ MCMC(
 # check shit out
 show(load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/spec_MCMC_output1.Robj"))
 layout(t(1:2))
-plot(aD[-(1:1000)], xlab="MCMC generation", ylab="value", main="aD")
-plot((aD_accept/aD_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
-plot(as.vector(aE)[-(1:1000)], xlab="MCMC generation", ylab="value", main="aE")
-plot((aE_accept/aE_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
-plot(a2[-(1:1000)], xlab="MCMC generation", ylab="value", main="a2")
-plot((a2_accept/a2_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
-plot(Prob[-(1:1000)], xlab="MCMC generation", main="log likelihood")
-plot((mu_accept/mu_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
-plot((thetas_accept/thetas_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
-hist((aE/aD)[-(1:1000)],breaks=100,main="posterior of aE/aD ratio")
+plot(aD[-(1:40)], xlab="MCMC generation", ylab="value", main="aD")
+plot((aD_accept/aD_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
+plot(as.vector(aE)[-(1:40)], xlab="MCMC generation", ylab="value", main="aE")
+plot((aE_accept/aE_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
+plot(a2[-(1:40)], xlab="MCMC generation", ylab="value", main="a2")
+plot((a2_accept/a2_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
+plot(Prob[-(1:40)], xlab="MCMC generation", main="log likelihood")
+plot((mu_accept/mu_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
+plot((thetas_accept/thetas_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
+hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
+mean(aE/aD)
+sd(aE/aD)
 
 # convert for ggplotting
 spec.ratio <- aE/aD %>% as.data.frame()
@@ -322,16 +365,16 @@ MCMC(
   D = tess.geo,  # geographic distances
   E = tess.env,  # environmental distances
   k = 5, loci = 3744,  # dimensions of the data
-  delta = 0.0001,  # a small, positive, number
-  aD_stp = 0.1,   # step sizes for the MCMC
-  aE_stp = 0.1,
-  a2_stp = 0.025,
+  delta = 0.001,  # a small, positive, number
+  aD_stp = 0.6,   # step sizes for the MCMC
+  aE_stp = 0.08,
+  a2_stp = 0.08,
   thetas_stp = 0.2,
   mu_stp = 0.35,
-  ngen = 10000,        # number of steps (2e6)
-  printfreq = 100,  # print progress (10000)
-  savefreq = 100,     # save out current state
-  samplefreq = 2,     # record current state for posterior (2000)
+  ngen = 1000000,        # number of steps (2e6)
+  printfreq = 250,  # print progress (10000)
+  savefreq = 250,     # save out current state
+  samplefreq = 250,     # record current state for posterior (2000)
   prefix = "/Users/ethanlinck/Dropbox/scarab_migration/bedassle/tess_",   # filename prefix
   continue=FALSE,
   continuing.params=NULL)
@@ -339,16 +382,19 @@ MCMC(
 # check shit out
 show(load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/tess_MCMC_output1.Robj"))
 layout(t(1:2))
-plot(aD[-(1:1000)], xlab="MCMC generation", ylab="value", main="aD")
-plot((aD_accept/aD_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
-plot(as.vector(aE)[-(1:1000)], xlab="MCMC generation", ylab="value", main="aE")
-plot((aE_accept/aE_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
-plot(a2[-(1:1000)], xlab="MCMC generation", ylab="value", main="a2")
-plot((a2_accept/a2_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
-plot(Prob[-(1:1000)], xlab="MCMC generation", main="log likelihood")
-plot((mu_accept/mu_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
-plot((thetas_accept/thetas_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
-hist((aE/aD)[-(1:1000)],breaks=100,main="posterior of aE/aD ratio")
+plot(aD[-(1:40)], xlab="MCMC generation", ylab="value", main="aD")
+plot((aD_accept/aD_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
+plot(as.vector(aE)[-(1:40)], xlab="MCMC generation", ylab="value", main="aE")
+plot((aE_accept/aE_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
+plot(a2[-(1:40)], xlab="MCMC generation", ylab="value", main="a2")
+plot((a2_accept/a2_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
+plot(Prob[-(1:40)], xlab="MCMC generation", main="log likelihood")
+plot((mu_accept/mu_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
+plot((thetas_accept/thetas_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
+hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
+hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
+mean(aE/aD)
+sd(aE/aD)
 
 # convert for ggplotting
 tess.ratio <- aE/aD %>% as.data.frame()
@@ -427,32 +473,35 @@ MCMC(
   E = pod.env,  # environmental distances
   k = 3, loci = 978,  # dimensions of the data
   delta = 0.0001,  # a small, positive, number
-  aD_stp = 0.1,   # step sizes for the MCMC
+  aD_stp = 0.6,   # step sizes for the MCMC
   aE_stp = 0.1,
-  a2_stp = 0.025,
+  a2_stp = 0.07,
   thetas_stp = 0.2,
   mu_stp = 0.35,
-  ngen = 10000,        # number of steps (2e6)
-  printfreq = 100,  # print progress (10000)
-  savefreq = 100,     # save out current state
-  samplefreq = 2,     # record current state for posterior (2000)
+  ngen = 1000000,        # number of steps (2e6)
+  printfreq = 250,  # print progress (10000)
+  savefreq = 250,     # save out current state
+  samplefreq = 250,     # record current state for posterior (2000)
   prefix = "/Users/ethanlinck/Dropbox/scarab_migration/bedassle/pod_",   # filename prefix
   continue=FALSE,
   continuing.params=NULL)
 
 # check shit out
-show(load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/tess_MCMC_output1.Robj"))
+show(load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/pod_MCMC_output1.Robj"))
 layout(t(1:2))
-plot(aD[-(1:1000)], xlab="MCMC generation", ylab="value", main="aD")
-plot((aD_accept/aD_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
-plot(as.vector(aE)[-(1:1000)], xlab="MCMC generation", ylab="value", main="aE")
-plot((aE_accept/aE_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
-plot(a2[-(1:1000)], xlab="MCMC generation", ylab="value", main="a2")
-plot((a2_accept/a2_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
-plot(Prob[-(1:1000)], xlab="MCMC generation", main="log likelihood")
-plot((mu_accept/mu_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
-plot((thetas_accept/thetas_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
-hist((aE/aD)[-(1:1000)],breaks=100,main="posterior of aE/aD ratio")
+plot(aD[-(1:40)], xlab="MCMC generation", ylab="value", main="aD")
+plot((aD_accept/aD_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
+plot(as.vector(aE)[-(1:40)], xlab="MCMC generation", ylab="value", main="aE")
+plot((aE_accept/aE_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
+plot(a2[-(1:40)], xlab="MCMC generation", ylab="value", main="a2")
+plot((a2_accept/a2_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
+plot(Prob[-(1:40)], xlab="MCMC generation", main="log likelihood")
+plot((mu_accept/mu_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
+plot((thetas_accept/thetas_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
+hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
+mean(aE/aD)
+sd(aE/aD)
+
 
 # convert for ggplotting
 pod.ratio <- aE/aD %>% as.data.frame()
@@ -531,15 +580,15 @@ MCMC(
   E = affin.env,  # environmental distances
   k = 4, loci = 329,  # dimensions of the data
   delta = 0.0001,  # a small, positive, number
-  aD_stp = 0.1,   # step sizes for the MCMC
-  aE_stp = 0.1,
-  a2_stp = 0.025,
+  aD_stp = 0.6,   # step sizes for the MCMC
+  aE_stp = 0.08,
+  a2_stp = 0.07,
   thetas_stp = 0.2,
   mu_stp = 0.35,
-  ngen = 10000,        # number of steps (2e6)
-  printfreq = 100,  # print progress (10000)
-  savefreq = 100,     # save out current state
-  samplefreq = 2,     # record current state for posterior (2000)
+  ngen = 1000000,        # number of steps (2e6)
+  printfreq = 250,  # print progress (10000)
+  savefreq = 250,     # save out current state
+  samplefreq = 250,     # record current state for posterior (2000)
   prefix = "/Users/ethanlinck/Dropbox/scarab_migration/bedassle/affin_",   # filename prefix
   continue=FALSE,
   continuing.params=NULL)
@@ -547,16 +596,19 @@ MCMC(
 # check shit out
 show(load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/affin_MCMC_output1.Robj"))
 layout(t(1:2))
-plot(aD[-(1:1000)], xlab="MCMC generation", ylab="value", main="aD")
-plot((aD_accept/aD_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
-plot(as.vector(aE)[-(1:1000)], xlab="MCMC generation", ylab="value", main="aE")
-plot((aE_accept/aE_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
-plot(a2[-(1:1000)], xlab="MCMC generation", ylab="value", main="a2")
-plot((a2_accept/a2_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
-plot(Prob[-(1:1000)], xlab="MCMC generation", main="log likelihood")
-plot((mu_accept/mu_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
-plot((thetas_accept/thetas_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
-hist((aE/aD)[-(1:1000)],breaks=100,main="posterior of aE/aD ratio")
+plot(aD[-(1:40)], xlab="MCMC generation", ylab="value", main="aD")
+plot((aD_accept/aD_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
+plot(as.vector(aE)[-(1:40)], xlab="MCMC generation", ylab="value", main="aE")
+plot((aE_accept/aE_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
+plot(a2[-(1:40)], xlab="MCMC generation", ylab="value", main="a2")
+plot((a2_accept/a2_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
+plot(Prob[-(1:40)], xlab="MCMC generation", main="log likelihood")
+plot((mu_accept/mu_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
+plot((thetas_accept/thetas_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
+hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
+mean(aE/aD)
+sd(aE/aD)
+
 
 # convert for ggplotting
 affin.ratio <- aE/aD %>% as.data.frame()
@@ -609,3 +661,20 @@ ggplot(bed.df, aes(y=ratio, fill=species)) +
     strip.background = element_blank(),
     panel.grid = element_blank())
 
+# version for presentation
+ggplot(bed.df, aes(y=ratio, fill=species)) + 
+  theme_bw() +
+  geom_boxplot(alpha=0.6, binwidth = 0.25) +
+  theme(axis.text.x = element_blank()) +
+  scale_fill_manual(values=wes_palette(n=5, name="FantasticFox1")) +
+  ylim(0,100) +
+  ylab("aE/aD ratio") +
+  theme(
+    strip.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.text=element_text(size=12),
+    strip.text.x=element_text(size=18),
+    axis.title.x=element_text(size=16),
+    axis.title.y=element_text(size=16),
+    legend.title=element_text(size=16),
+    legend.text=element_text(size=14))

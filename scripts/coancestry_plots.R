@@ -1,10 +1,11 @@
-### plots for publication
+### plot coancestry matrices separately
 
 library(ggplot2)
 library(viridis)
 library(reshape2)
 library(wesanderson)
 library(cowplot)
+library(RColorBrewer)
 
 ### fineRADstructure 
 
@@ -173,14 +174,14 @@ melted.coanc.df <- rbind.data.frame(melted_satanas,melted_spec,melted_tess,melte
 melted.coanc.df$species <- factor(melted.coanc.df$species,levels=c("eurysternus_affin","dichotomius_podalirius",
                                                            "deltochilum_tesselatum","deltochilum_speciocissimum","dichotomius_satanas"))
 
+write.csv(melted.coanc.df, file="~/Dropbox/scarab_migration/data/melted.coancestry.df.csv")
+
 l <- ggplot(data=melted.coanc.df,aes(x=Var1, y=Var2, fill=relative_coancestry)) + 
   theme_bw() +
   geom_tile() +
   xlab(element_blank())+
   ylab(element_blank())+
-  scale_fill_gradient(name = "coancestry",
-                      low = "#FFFFFF",
-                      high = "#BA4A00") +
+  scale_fill_gradient(low = "white", high = "#5C8789") +
   facet_wrap(~species, scales="free") +
   theme(
     strip.background = element_blank(),
@@ -188,8 +189,90 @@ l <- ggplot(data=melted.coanc.df,aes(x=Var1, y=Var2, fill=relative_coancestry)) 
     axis.text.x = element_blank(),
     axis.text.y = element_blank()) 
 
+# version for presentation
 
+m <- ggplot(data=melted.coanc.df,aes(x=Var1, y=Var2, fill=relative_coancestry)) + 
+  theme_bw() +
+  geom_tile() +
+  xlab(element_blank())+
+  ylab(element_blank())+
+  scale_fill_gradient(low = "white", high = "#5C8789") +
+  facet_wrap(~species, scales="free") +
+  theme(
+    strip.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+      strip.text.x=element_text(size=14),
+      legend.title=element_text(size=14))
 
+# interpret with script from software package
+source("/Users/ethanlinck/Applications/fineRADstructure/FinestructureLibrary.R", chdir = TRUE)
+
+# read in data for d. satanas
+sat.chunkfile<-"~/Dropbox/scarab_migration/raw_data/d_satanas_painter_chunks.out" ## RADpainter output file
+sat.mcmcfile<-"/Users/ethanlinck/Applications/fineRADstructure/d_satanas_painter_chunks.mcmc.xml" ## finestructure mcmc file
+sat.treefile<-"/Users/ethanlinck/Applications/fineRADstructure/d_satanas_painter_chunks.mcmcTree.xml" ## finestructure tree fil
+sat.dataraw<-as.matrix(read.table(sat.chunkfile,row.names=1,header=T,skip=1)) # read in the pairwise coincidence 
+sat.mcmcxml<-xmlTreeParse(sat.mcmcfile) ## read into xml format
+sat.mcmcdata<-as.data.frame.myres(sat.mcmcxml)
+sat.mcmcdata<-as_tibble(sat.mcmcdata)
+
+# get minimmum value of posterior prob
+max <- which.max(sat.mcmcdata$Posterior)
+print(sat.mcmcdata[max,]$K) #11
+
+# read in data for d. spec
+spec.chunkfile<-"~/Dropbox/scarab_migration/raw_data/d_spec_painter_chunks.out" ## RADpainter output file
+spec.mcmcfile<-"/Users/ethanlinck/Applications/fineRADstructure/d_spec_painter_chunks.mcmc.xml" ## finestructure mcmc file
+spec.treefile<-"/Users/ethanlinck/Applications/fineRADstructure/d_spec_painter_chunks.mcmcTree.xml" ## finestructure tree fil
+spec.dataraw<-as.matrix(read.table(spec.chunkfile,row.names=1,header=T,skip=1)) # read in the pairwise coincidence 
+spec.mcmcxml<-xmlTreeParse(spec.mcmcfile) ## read into xml format
+spec.mcmcdata<-as.data.frame.myres(spec.mcmcxml)
+spec.mcmcdata<-as_tibble(spec.mcmcdata)
+
+# get minimmum value of posterior prob
+max <- which.max(spec.mcmcdata$Posterior)
+print(spec.mcmcdata[max,]$K) #5
+
+# read in data for d. tess
+tess.chunkfile<-"~/Dropbox/scarab_migration/raw_data/d_tess_painter_chunks.out" ## RADpainter output file
+tess.mcmcfile<-"/Users/ethanlinck/Applications/fineRADstructure/d_tess_painter_chunks.mcmc.xml" ## finestructure mcmc file
+tess.treefile<-"/Users/ethanlinck/Applications/fineRADstructure/d_tess_painter_chunks.mcmcTree.xml" ## finestructure tree fil
+tess.dataraw<-as.matrix(read.table(tess.chunkfile,row.names=1,header=T,skip=1)) # read in the pairwise coincidence 
+tess.mcmcxml<-xmlTreeParse(tess.mcmcfile) ## read into xml format
+tess.mcmcdata<-as.data.frame.myres(tess.mcmcxml)
+tess.mcmcdata<-as_tibble(tess.mcmcdata)
+
+# get minimmum value of posterior prob
+max <- which.max(tess.mcmcdata$Posterior)
+print(tess.mcmcdata[max,]$K) #5
+
+# read in data for d. pod
+pod.chunkfile<-"~/Dropbox/scarab_migration/raw_data/d_pod_painter_chunks.out" ## RADpainter output file
+pod.mcmcfile<-"/Users/ethanlinck/Applications/fineRADstructure/d_pod_painter_chunks.mcmc.xml" ## finestructure mcmc file
+pod.treefile<-"/Users/ethanlinck/Applications/fineRADstructure/d_pod_painter_chunks.mcmcTree.xml" ## finestructure tree fil
+pod.dataraw<-as.matrix(read.table(pod.chunkfile,row.names=1,header=T,skip=1)) # read in the pairwise coincidence 
+pod.mcmcxml<-xmlTreeParse(pod.mcmcfile) ## read into xml format
+pod.mcmcdata<-as.data.frame.myres(pod.mcmcxml)
+pod.mcmcdata<-as_tibble(pod.mcmcdata)
+
+# get minimmum value of posterior prob
+max <- which.max(pod.mcmcdata$Posterior)
+print(pod.mcmcdata[max,]$K) #5
+
+# read in data for e. affin
+affin.chunkfile<-"~/Dropbox/scarab_migration/raw_data/e_affin_painter_chunks.out" ## RADpainter output file
+affin.mcmcfile<-"/Users/ethanlinck/Applications/fineRADstructure/e_affin_painter_chunks.mcmc.xml" ## finestructure mcmc file
+affin.treefile<-"/Users/ethanlinck/Applications/fineRADstructure/e_affin_painter_chunks.mcmcTree.xml" ## finestructure tree fil
+affin.dataraw<-as.matrix(read.table(affin.chunkfile,row.names=1,header=T,skip=1)) # read in the pairwise coincidence 
+affin.mcmcxml<-xmlTreeParse(affin.mcmcfile) ## read into xml format
+affin.mcmcdata<-as.data.frame.myres(affin.mcmcxml)
+affin.mcmcdata<-as_tibble(affin.mcmcdata)
+
+# get minimmum value of posterior prob
+max <- which.max(affin.mcmcdata$Posterior)
+print(affin.mcmcdata[max,]$K) #7
 
 
 

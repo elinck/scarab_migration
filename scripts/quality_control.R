@@ -12,7 +12,6 @@ a <- a[1]
 reads <- read.table(file,skip=(a),nrow=(nsamples))
 colnames(reads) <- c("sample_ID", "read_count")
 
-
 reads <- read.table("reads.txt")[-1,]
 colnames(reads) <- c("sample_ID", "read_count")
 reads$sample_ID <- gsub("EU","Eurysternus_affin",reads$sample_ID)
@@ -43,3 +42,25 @@ ggplot(reads, aes(x=Species, y=Read_count)) +
   theme(axis.text.x = element_text(angle = 60, hjust = 1, size=9)) +
   ylab("Number of reads")
 dev.off()
+
+# stats for paper
+levels(as.factor(reads$Species))
+drop <- c("Phanaeus_meleagris","Deltochilum_amazonicum","Coprophanaeus_telamon",
+          "Oxysternon_silenus","Dichotomious_protectus","Oxysternon_conspicullatum")
+reads.subset <- reads[!reads$Species %in% drop,]
+levels(as.factor(reads.subset$Species))
+
+# average coverage
+m1 <- reads.subset[reads.subset$Species=="Deltochilum_speciosissimum",]$Read_count %>% mean() #884498.7
+m2 <- reads.subset[reads.subset$Species=="Deltochilum_tesselatum",]$Read_count %>% mean() #890779.1
+m3 <- reads.subset[reads.subset$Species=="Dichotomious_podalirius",]$Read_count %>% mean() #905850.6
+m4 <- reads.subset[reads.subset$Species=="Dichotomious_satanas",]$Read_count %>% mean() #917563.1
+m5 <- reads.subset[reads.subset$Species=="Eurysternus_affin",]$Read_count %>% mean() #824833.5
+mdf <- as.vector(c(m1,m2,m3,m4,m5))
+mean(mdf) #884705
+sd(mdf) #35875.92
+mean(reads.subset$Read_count)
+sd(reads.subset$Read_count)
+
+
+

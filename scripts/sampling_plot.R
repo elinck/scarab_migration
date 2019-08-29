@@ -1,4 +1,4 @@
-### plot sampling localities
+### plot sampling localities separately
 
 library(ggmap)
 library(wesanderson)
@@ -62,8 +62,52 @@ p2 <- ggmap(colonso, alpha=0.2) +
 grid.arrange(p1,p2,ncol=2)
 p1 + p2
 
+# presentation version
 
+p3 <- ggmap(pipeline) +
+  theme_bw() +
+  geom_point(data = df.pipeline,
+             aes(x = long, y = lat,size=elevation, fill = population),
+             pch=21)+
+  scale_fill_wes(name="locality") +
+  ggtitle("pipeline") +
+  xlab("longitude") +
+  ylab("latitude") +
+  theme(
+    strip.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.text=element_text(size=12),
+    strip.text.x=element_text(size=18),
+    axis.title.x=element_text(size=16),
+    axis.title.y=element_text(size=16),
+    legend.title=element_text(size=16),
+    legend.text=element_text(size=12),
+    plot.title=element_text(size=16)) +
+  guides(fill = guide_legend(order=1),
+         size = guide_legend(order=2))
 
+p4 <- ggmap(colonso, alpha=0.2) +
+  theme_bw() +
+  geom_point(data = df.colonso,
+             aes(x = long, y = lat, fill = population, size=elevation),
+             pch=21)+
+  scale_fill_wes(name="locality") +
+  ggtitle("colonso de chalupas") +
+  xlab("longitude") +
+  ylab("latitude") +
+  theme(
+    strip.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.text=element_text(size=12),
+    strip.text.x=element_text(size=18),
+    axis.title.x=element_text(size=16),
+    axis.title.y=element_text(size=16),
+    legend.title=element_text(size=16),
+    legend.text=element_text(size=12),
+    plot.title=element_text(size=16)) +
+  guides(fill = guide_legend(order=1),
+         size = guide_legend(order=2))
 
+p3 + p4
 
 

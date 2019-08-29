@@ -1,8 +1,12 @@
+# approximate bayesian computation to test demographic histories
+
 library(coala)
 library(abc)
 library(tidyverse)
 library(wesanderson)
 library(reshape2)
+library(vcfR)
+library(adegenet)
 
 ### d. satanas
 
@@ -23,8 +27,8 @@ sat.growth.model <- coal_model(99, 50, 3) +
   sumstat_sfs()
 
 # simulate data
-sat.null.sim <- simulate(sat.null.model, nsim = 2000, seed = 69)
-sat.growth.sim <- simulate(sat.growth.model, nsim = 2000, seed = 32)
+sat.null.sim <- simulate(sat.null.model, nsim = 1000000, seed = 39, cores = 24)
+sat.growth.sim <- simulate(sat.growth.model, nsim = 1000000, seed = 82, cores = 30)
 
 # create params and sumstts for abc
 sat.null.param <- create_abc_param(sat.null.sim, sat.null.model)
@@ -38,10 +42,10 @@ sat.growth.post <- abc(sat.sfs, sat.growth.param, sat.growth.sumstat, 0.05, meth
 
 # prep data for model 
 sat.sumstat.merge <- rbind(sat.null.sumstat, sat.growth.sumstat)
-sat.index <- c(rep("null",2000),rep("growth",2000))
+sat.index <- c(rep("null",1000000),rep("growth",1000000))
 
 # check ability to distinguish models
-sat.cv.modsel <- cv4postpr(sat.index, sat.sumstat.merge, nval=5, tols=c(.05,.1), method="rejection")
+sat.cv.modsel <- cv4postpr(sat.index, sat.sumstat.merge, nval=100, tols=c(.05,.1), method="rejection")
 summary(cv.modsel)
 
 # model test
@@ -93,8 +97,8 @@ spec.growth.model <- coal_model(47, 50, 3) +
   sumstat_sfs()
 
 # simulate data
-spec.null.sim <- simulate(spec.null.model, nsim = 2000, seed = 14)
-spec.growth.sim <- simulate(spec.growth.model, nsim = 2000, seed = 22)
+spec.null.sim <- simulate(spec.null.model, nsim = 1000000, seed = 14, cores = 6)
+spec.growth.sim <- simulate(spec.growth.model, nsim = 1000000, seed = 22, cores = 6)
 
 # create params and sumstts for abc
 spec.null.param <- create_abc_param(spec.null.sim, spec.null.model)
@@ -108,10 +112,10 @@ spec.growth.post <- abc(spec.sfs, spec.growth.param, spec.growth.sumstat, 0.05, 
 
 # prep data for model 
 spec.sumstat.merge <- rbind(spec.null.sumstat, spec.growth.sumstat)
-spec.index <- c(rep("null",2000),rep("growth",2000))
+spec.index <- c(rep("null",1000000),rep("growth",1000000))
 
 # check ability to distinguish models
-spec.cv.modsel <- cv4postpr(spec.index, spec.sumstat.merge, nval=5, tols=c(.05,.1), method="rejection")
+spec.cv.modsel <- cv4postpr(spec.index, spec.sumstat.merge, nval=100, tols=c(.05,.1), method="rejection")
 summary(spec.cv.modsel)
 
 # model test
@@ -163,8 +167,8 @@ tess.growth.model <- coal_model(19, 50, 3) +
   sumstat_sfs()
 
 # simulate data
-tess.null.sim <- simulate(tess.null.model, nsim = 2000, seed = 19)
-tess.growth.sim <- simulate(tess.growth.model, nsim = 2000, seed = 32)
+tess.null.sim <- simulate(tess.null.model, nsim = 1000000, seed = 19, cores = 6)
+tess.growth.sim <- simulate(tess.growth.model, nsim = 1000000, seed = 32, cores = 6)
 
 # create params and sumstts for abc
 tess.null.param <- create_abc_param(tess.null.sim, tess.null.model)
@@ -178,10 +182,10 @@ tess.growth.post <- abc(tess.sfs, tess.growth.param, tess.growth.sumstat, 0.05, 
 
 # prep data for model 
 tess.sumstat.merge <- rbind(tess.null.sumstat, tess.growth.sumstat)
-tess.index <- c(rep("null",2000),rep("growth",2000))
+tess.index <- c(rep("null",1000000),rep("growth",1000000))
 
 # check ability to distinguish models
-tess.cv.modsel <- cv4postpr(tess.index, tess.sumstat.merge, nval=5, tols=c(.05,.1), method="rejection")
+tess.cv.modsel <- cv4postpr(tess.index, tess.sumstat.merge, nval=100, tols=c(.05,.1), method="rejection")
 summary(tess.cv.modsel)
 
 # model test
@@ -233,8 +237,8 @@ pod.growth.model <- coal_model(26, 50, 3) +
   sumstat_sfs()
 
 # simulate data
-pod.null.sim <- simulate(pod.null.model, nsim = 2000, seed = 9)
-pod.growth.sim <- simulate(pod.growth.model, nsim = 2000, seed = 51)
+pod.null.sim <- simulate(pod.null.model, nsim = 1000000, seed = 9, cores=6)
+pod.growth.sim <- simulate(pod.growth.model, nsim = 1000000, seed = 51,cores=6)
 
 # create params and sumstts for abc
 pod.null.param <- create_abc_param(pod.null.sim, pod.null.model)
@@ -248,10 +252,10 @@ pod.growth.post <- abc(pod.sfs, pod.growth.param, pod.growth.sumstat, 0.05, meth
 
 # prep data for model 
 pod.sumstat.merge <- rbind(pod.null.sumstat, pod.growth.sumstat)
-pod.index <- c(rep("null",2000),rep("growth",2000))
+pod.index <- c(rep("null",1000000),rep("growth",1000000))
 
 # check ability to distinguish models
-pod.cv.modsel <- cv4postpr(pod.index, pod.sumstat.merge, nval=5, tols=c(.05,.1), method="rejection")
+pod.cv.modsel <- cv4postpr(pod.index, pod.sumstat.merge, nval=100, tols=c(.05,.1), method="rejection")
 summary(pod.cv.modsel)
 
 # model test
@@ -303,8 +307,8 @@ affin.growth.model <- coal_model(24, 50, 3) +
   sumstat_sfs()
 
 # simulate data
-affin.null.sim <- simulate(affin.null.model, nsim = 5000, seed = 3)
-affin.growth.sim <- simulate(affin.growth.model, nsim = 5000, seed = 71)
+affin.null.sim <- simulate(affin.null.model, nsim = 1000000, seed = 3, cores=6)
+affin.growth.sim <- simulate(affin.growth.model, nsim = 1000000, seed = 71,cores=6)
 
 # create params and sumstts for abc
 affin.null.param <- create_abc_param(affin.null.sim, affin.null.model)
@@ -318,10 +322,10 @@ affin.growth.post <- abc(affin.sfs, affin.growth.param, affin.growth.sumstat, 0.
 
 # prep data for model 
 affin.sumstat.merge <- rbind(affin.null.sumstat, affin.growth.sumstat)
-affin.index <- c(rep("null",5000),rep("growth",5000))
+affin.index <- c(rep("null",1000000),rep("growth",1000000))
 
 # check ability to distinguish models
-affin.cv.modsel <- cv4postpr(affin.index, affin.sumstat.merge, nval=, tols=c(.05,.1), method="rejection")
+affin.cv.modsel <- cv4postpr(affin.index, affin.sumstat.merge, nval=100, tols=c(.05,.1), method="rejection")
 summary(affin.cv.modsel)
 
 # model test
@@ -358,6 +362,7 @@ growth.df <- rbind.data.frame(sat.growth.df, spec.growth.df, tess.growth.df, pod
 growth.df$species <- factor(growth.df$species,levels=c("eurysternus_affin","dichotomius_podalirius",
                                                                    "deltochilum_tesselatum","deltochilum_speciocissimum","dichotomius_satanas"))
 write.csv(growth.df, "~/Dropbox/scarab_migration/data/growth.csv")
+growth.df <- read.csv("~/Dropbox/scarab_migration/data/growth.csv")[-1]
 r.df <- growth.df[growth.df$param=="r",]
 theta.df <- growth.df[growth.df$param=="theta",]
 
@@ -390,6 +395,27 @@ ggplot(growth.df, aes(x=value, fill=species)) +
   theme(
     strip.background = element_blank(),
     panel.grid = element_blank()) 
+
+# presentation version
+
+ggplot(growth.df, aes(x=value, fill=species)) + 
+  theme_bw() +
+  geom_density(alpha=0.6) +
+  #theme(axis.text.x = element_text(angle = 60, hjust = 1, size=9)) +
+  scale_fill_manual(values=wes_palette(n=5, name="FantasticFox1")) +
+  #xlim(0,20) +
+  #ylim(0,2000) +
+  facet_wrap(~param, scales="free") +
+  theme(
+    strip.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.text=element_text(size=12),
+    strip.text.x=element_text(size=18),
+    axis.title.x=element_text(size=16),
+    axis.title.y=element_text(size=16),
+    legend.title=element_text(size=16),
+    legend.text=element_text(size=12))
+
   
 melted.sat.bayes <- melt(sat.bayes)
 melted.spec.bayes <- melt(spec.bayes)
@@ -406,7 +432,7 @@ melted.bayes.df <- rbind.data.frame(melted.sat.bayes,melted.spec.bayes,
                                     melted.tess.bayes,melted.pod.bayes,
                                     melted.affin.bayes)
 write.csv(melted.bayes.df, "~/Dropbox/scarab_migration/data/melted.bayes.csv")
-
+melted.bayes.df <- read.csv("~/Dropbox/scarab_migration/data/melted.bayes.csv")[-1]
 
 melted.bayes.df$species <- factor(melted.bayes.df$species,levels=c("eurysternus_affin","dichotomius_podalirius",
                                                  "deltochilum_tesselatum","deltochilum_speciocissimum","dichotomius_satanas"))
@@ -423,5 +449,39 @@ ggplot(data = melted.bayes.df, aes(x=Var1, y=Var2, fill=value)) +
   theme(
     strip.background = element_blank(),
     panel.grid = element_blank()) 
+
+# presentation version
+
+ggplot(data = melted.bayes.df, aes(x=Var1, y=Var2, fill=value)) + 
+  theme_classic() +
+  geom_tile() +
+  xlab(element_blank())+
+  ylab(element_blank())+
+  scale_fill_gradient(name = "Bayes factor",
+                      low = "#FFFFFF",
+                      high = "#BA4A00") +
+  facet_wrap(~species) +
+  theme(
+    strip.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.text=element_text(size=14),
+    strip.text.x=element_text(size=14),
+    axis.title.x=element_text(size=14),
+    axis.title.y=element_text(size=14),
+    legend.title=element_text(size=14),
+    legend.text=element_text(size=14))
+
+# stats for paper
+length(unique(satanas.gen@chromosome)) #1338
+length(unique(spec.gen@chromosome)) #19068
+length(unique(tess.gen@chromosome)) #4150
+length(unique(pod.gen@chromosome)) #890
+length(unique(affin.gen@chromosome)) #347
+
+length(satanas.gen@loc.names) #3825
+length(spec.gen@loc.names) #68373
+length(tess.gen@loc.names) #9633
+length(pod.gen@loc.names) #2544
+length(affin.gen@loc.names) #1314
 
 

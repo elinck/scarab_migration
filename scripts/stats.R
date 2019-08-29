@@ -1,10 +1,12 @@
+# calculate theta and wright's NS
+
 library(vcfR)
 library(pegas)
 library(sGD)
 library(cowplot)
 source("http://bioconductor.org/biocLite.R")
 library(pcadapt)
-
+library(lme4)
 
 ### read in locality data
 localities <- read.csv("data/scarab_spp_master.csv")
@@ -159,7 +161,6 @@ affin.df$species <- rep("eurysternus_affin",nrow(affin.df))
 colnames(affin.df) <- c("theta", "population","species")
 
 master.df <- rbind.data.frame(sat.df, spec.df, tess.df, pod.df, affin.df)
-
 # assign elevation
 master.df$elevation <- as.character(master.df$population)
 master.df$elevation[master.df$elevation=="HU3"] <- 2025
@@ -168,6 +169,54 @@ master.df$elevation[master.df$elevation=="CC1"] <- 730
 master.df$elevation[master.df$elevation=="MA2150"] <- 2125
 master.df$elevation[master.df$elevation=="YY2150"] <- 2150
 master.df$elevation <- as.numeric(master.df$elevation)
+
+write.csv(master.df, "~/Dropbox/scarab_migration/data/master.theta.df.csv")
+
+# run from file
+master.df <- read.csv("~/Dropbox/scarab_migration/data/master.theta.df.csv")
+master.df$species <- as.factor(master.df$species)
+master.df$species <- factor(master.df$species,levels=c("eurysternus_affin","dichotomius_podalirius",
+                                                       "deltochilum_tesselatum","deltochilum_speciocissimum","dichotomius_satanas"))
+# subset theta df 
+affin.mast <- master.df[master.df$species=="eurysternus_affin",]
+pod.mast <- master.df[master.df$species=="dichotomius_podalirius",]
+tess.mast <- master.df[master.df$species=="deltochilum_tesselatum",]
+spec.mast <- master.df[master.df$species=="deltochilum_speciocissimum",]
+sat.mast <- master.df[master.df$species=="dichotomius_satanas",]
+
+# calculate absolute value of distance from mean sampling elevation
+affin.mid <- mean(affin.mast$elevation)
+affin.mast$limit_score <- abs(affin.mast$elevation-affin.mid)
+pod.mid <- mean(pod.mast$elevation)
+pod.mast$limit_score <- abs(pod.mast$elevation-pod.mid)
+tess.mid <- mean(tess.mast$elevation)
+tess.mast$limit_score <- abs(tess.mast$elevation-tess.mid)
+spec.mid <- mean(spec.mast$elevation)
+spec.mast$limit_score <- abs(spec.mast$elevation-spec.mid)
+sat.mid <- mean(sat.mast$elevation)
+sat.mast$limit_score <- abs(sat.mast$elevation-sat.mid)
+
+# mixed models to see whether distance from range limit affects values of theta
+affin.theta.mod <- lmer(theta ~ limit_score + (1 | population), affin.mast)
+null.affin.mod <-  lmer(theta ~ (1 | population), affin.mast)
+anova(affin.theta.mod,null.affin.mod)  #X2=2.309(1), p=0.1286
+pod.theta.mod <- lmer(theta ~ limit_score + (1 | population), pod.mast)
+null.pod.mod <-  lmer(theta ~ (1 | population), pod.mast)
+anova(pod.theta.mod,null.pod.mod)  #X2=2.276(1), p=0.1314
+tess.theta.mod <- lmer(theta ~ limit_score + (1 | population), tess.mast)
+null.tess.mod <-  lmer(theta ~ (1 | population), tess.mast)
+anova(tess.theta.mod,null.tess.mod)  #X2=0.9443(1), p=0.3312
+spec.theta.mod <- lmer(theta ~ limit_score + (1 | population), spec.mast)
+null.spec.mod <-  lmer(theta ~ (1 | population), spec.mast)
+anova(spec.theta.mod,null.spec.mod)  #X2=2.045(1), p=0.1527
+sat.theta.mod <- lmer(theta ~ limit_score + (1 | population), sat.mast)
+null.sat.mod <-  lmer(theta ~ (1 | population), sat.mast)
+anova(sat.theta.mod,null.sat.mod)  #X2=0.9191(1), p=0.3377
+
+fst.df$species <- as.factor(fst.df$species)
+fst.df$species <- factor(fst.df$species,levels=c("eurysternus_affin","dichotomius_podalirius",
+                                                 "deltochilum_tesselatum","deltochilum_speciocissimum","dichotomius_satanas"))
+
 
 # plot upper and lower transect separately
 t.a <- ggplot(master.df[master.df$elevation>1500,], aes(x=elevation, y=theta, fill=population)) +
@@ -187,7 +236,7 @@ t.b <- ggplot(master.df[master.df$elevation<1500,], aes(x=elevation, y=theta, fi
 # fst regression
 fst.df <- read.csv(file="~/Dropbox/scarab_migration/data/fst_dist_species.csv")[-1]
 fst.df <- fst.df[fst.df$distance>0,]
-fst.df$fst[fst.df$fst<0] <- 0
+#fst.df$fst[fst.df$fst<0] <- 0
 fst.df$log_distance <- log2(fst.df$distance)
 
 # d. satanas 
@@ -247,16 +296,6 @@ f.b <- ggplot(fst.lower, aes(x=log_distance, y=fst)) +
 plot_grid(t.a, f.a, labels = "AUTO", align = 'h', label_size = 12, ncol = 2, rel_widths = c(1,0.75))
 plot_grid(t.b, f.b, labels = "AUTO", align = 'h', label_size = 12, ncol = 2, rel_widths = c(1,0.75))
 
-write.csv(master.df, "~/Dropbox/scarab_migration/data/master.theta.df.csv")
-master.df <- read.csv("~/Dropbox/scarab_migration/data/master.theta.df.csv")[-1]
-
-master.df$species <- as.factor(master.df$species)
-master.df$species <- factor(master.df$species,levels=c("eurysternus_affin","dichotomius_podalirius",
-                                                       "deltochilum_tesselatum","deltochilum_speciocissimum","dichotomius_satanas"))
-fst.df$species <- as.factor(fst.df$species)
-fst.df$species <- factor(fst.df$species,levels=c("eurysternus_affin","dichotomius_podalirius",
-                                                 "deltochilum_tesselatum","deltochilum_speciocissimum","dichotomius_satanas"))
-
 # plot
 t.c <- ggplot(master.df, aes(x=elevation, y=theta, fill=population)) +
   theme_bw() +
@@ -272,10 +311,46 @@ f.c <- ggplot(fst.df, aes(x=log_distance, y=fst)) +
   theme_bw() +
   geom_point(pch=1,size=2) +
   facet_wrap(~ species, ncol=1) +
-  stat_summary(method=lm, geom="smooth", aes(group=1), linetype="dashed", color = "black") +
+  stat_summary(method="lm", geom="smooth", aes(group=1), linetype="dashed", color = "black") +
   ylab("fst/(1-fst)") +
   theme(
     strip.background = element_blank(),
     panel.grid = element_blank()) 
 
 plot_grid(t.c, f.c, labels = "AUTO", align = 'h', label_size = 12, ncol = 2, rel_widths = c(1,0.5))
+
+# presentation version
+t.cp <- ggplot(master.df, aes(x=elevation, y=theta, fill=population)) +
+  theme_bw() +
+  geom_boxplot(alpha=0.7, width=50) +
+  scale_fill_wes() +
+  stat_summary(fun.y=median, geom="smooth", aes(group=1), linetype="dashed", color = "black") +
+  facet_wrap(~ species, ncol = 1) +
+  theme(
+    strip.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.text=element_text(size=12),
+    strip.text.x=element_text(size=14),
+    axis.title.x=element_text(size=16),
+    axis.title.y=element_text(size=16),
+    legend.title=element_text(size=16),
+    legend.text=element_text(size=12))
+
+f.cp <- ggplot(fst.df, aes(x=log_distance, y=fst)) +
+  theme_bw() +
+  geom_point(pch=1,size=2) +
+  facet_wrap(~ species, ncol=3,scales ="free") +
+  geom_smooth(method="lm",linetype="dashed",color="black",) +
+  ylab("fst/(1-fst)") +
+  theme(
+    strip.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.text=element_text(size=12),
+    strip.text.x=element_text(size=14),
+    axis.title.x=element_text(size=14),
+    axis.title.y=element_text(size=14),
+    legend.title=element_text(size=16),
+    legend.text=element_text(size=12))
+
+plot_grid(t.c, f.c, labels = "AUTO", align = 'h', label_size = 12, ncol = 2, rel_widths = c(1,0.5))
+
