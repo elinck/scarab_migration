@@ -1,6 +1,6 @@
 # Analysis of scarab beetle genotypes for Linck & Sheldon *in prep*
     
-### Scripts  
+### Scripts and data   
   
 (in `scripts/` subdirectory)  
   
