@@ -197,16 +197,17 @@ df.pipeline <- localities[localities$transect=='pipeline',]
 df.colonso <- localities[localities$transect=='colonso',]
 ```
 
-We’ll use the “Darjeeling1” palette from the [wesanderson
+We’ll use the “BottleRocket2” palette from the [wesanderson
 package](https://github.com/karthik/wesanderson), but build a custom
 palette so we can hold colors constant across the levels of our sampling
 localities.
 
 ``` r
+# set palette
 scale_fill_wes <- function(...){
   ggplot2:::manual_scale(
     'fill', 
-    values = setNames(wes_palette("Darjeeling1", 13, type = "continuous"), levels(localities$population)), 
+    values = setNames(wes_palette("BottleRocket2", 13, type = "continuous"), levels(localities$short_locality)), 
     ...
   )
 }
@@ -214,7 +215,7 @@ scale_fill_wes <- function(...){
 scale_color_wes <- function(...){
   ggplot2:::manual_scale(
     'color', 
-    values = setNames(wes_palette("Darjeeling1", 13, type = "continuous"), levels(localities$population)), 
+    values = setNames(wes_palette("BottleRocket2", 13, type = "continuous"), levels(localities$short_locality)), 
     ...
   )
 }
@@ -428,7 +429,7 @@ affin.pc <- merge(affin.pc, localities, by.x = "sample", by.y = "ddocent_ID")
 master.pc.df <- rbind.data.frame(satanas.pc,spec.pc,tess.pc,pod.pc,affin.pc)
 ```
 
-Now’ let’s plot all these together with faceting.
+Now let’s plot all these together with faceting.
 
 ![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
 
@@ -617,7 +618,9 @@ bcftools +prune -l 0.1 -w 1000 e_affin_filtered.strict.recode.vcf -Ov -o e_affin
 We need to read in locality data and use this tp calculate geographic
 distance with
 [fossil’s](https://cran.r-project.org/web/packages/fossil/index.html)
-`earth.dist()` function.
+`earth.dist()` function. We normalize the geographic distances by
+dividing by their standard deviation to help with chain mixing, saving
+the stand deviation constant to later backtransform our variables:
 
 ``` r
 library(adegenet)
@@ -643,6 +646,10 @@ localities$short_locality[which(localities$short_locality=="730")] <- 800
 pop.loc <- cbind.data.frame(unique(localities$long),unique(localities$lat),unique(localities$short_locality))
 colnames(pop.loc) <- c("long", "lat", "pop")
 geodist <- earth.dist(pop.loc[c("long", "lat")], dist = FALSE)
+
+# standardize geographic distances
+geo.effect <- sd(c(geodist)) # save effect size
+geodist <- geodist/sd(c(geodist))
 ```
 
 We then will calculate *environmental* distances using the
@@ -650,7 +657,8 @@ We then will calculate *environmental* distances using the
 package, which directly collects data from the [WorldClim climate
 database](https://www.worldclim.org/). In addition to our elevational
 data, we’ll use mean annual temperature and mean annual precipitation
-(the bio1 and bio12 variables).
+(the bio1 and bio12 variables). Again, we’ll normalize these and save
+the standard deviation constant.
 
 ``` r
 # calculate environmental distance
@@ -668,6 +676,10 @@ rownames(loc.uniq) <- loc.uniq$population
 loc.uniq <- as.data.frame(loc.uniq)
 loc.uniq <- loc.uniq[,-which(names(loc.uniq) %in% c("population"))]
 env.dist.all <- dist(loc.uniq, diag = TRUE, upper = TRUE)
+
+# standardize env distances
+env.effect <- sd(c(env.dist.all)) # save effect size
+env.dist.all <- env.dist.all/sd(c(env.dist.all))
 ```
 
 Now we have to do some serious manipulation to the format of our
@@ -809,38 +821,39 @@ rownames(satanas.env) <- NULL
 ```
 
 Finally, we run the MCMC itself. Note the various parameters we can
-tweak. For now, we’re only running it for 10,000 generations; for
-publication we’re going to aim for 500K to 1000K.
+tweak. I’ve previously played around with short runs to tune step sizes;
+because of the low genetic differentiation in the data, it’s difficult
+to get the chain to mix well.
 
 ``` r
 # run MCMC for 10K gens
 MCMC(   
   counts = satanas.ac,
   sample_sizes = satanas.n,
-  D = satanas.geo,  # geographic distances
-  E = satanas.env,  # environmental distances
+  D = geodist,  # geographic distances
+  E = env.dist.all,  # environmental distances
   k = nrow(satanas.ac), loci = ncol(satanas.ac),  # dimensions of the data
   delta = 0.0001,  # a small, positive, number
-  aD_stp = 0.1,   # step sizes for the MCMC
-  aE_stp = 0.1,
+  aD_stp = 0.075,   # step sizes for the MCMC
+  aE_stp = 0.05,
   a2_stp = 0.025,
   thetas_stp = 0.2,
   mu_stp = 0.35,
-  ngen = 10000,        # number of steps (2e6)
-  printfreq = 100,  # print progress (10000)
-  savefreq = 100,     # save out current state
-  samplefreq = 2,     # record current state for posterior (2000)
+  ngen = 2000000,        # number of steps (2e6)
+  printfreq = 10000,  # print progress (10000)
+  savefreq = 1e5,     # save out current state
+  samplefreq = 250,     # record current state for posterior (2000)
   prefix = "/Users/ethanlinck/Dropbox/scarab_migration/bedassle/satanas_",   # filename prefix
   continue=FALSE,
-  continuing.params=NULL)
+  continuing.params=FALSE)
 ```
 
 Once this has run, we’re going to perform some basic examination of how
 well the chain performed, using code and the procedure from [Peter
 Ralph’s BEDASSLE
 tutorial](http://petrelharp.github.io/popgen-visualization-course/).
-I’ll show the output so you can see the different objects we have to
-play with.
+I’ll show the output (after dropping the first 25% of the chain as
+burnin) so you can see the different objects we have to play with.
 
     ##  [1] "last.params"   "LnL_thetas"    "LnL_counts"    "LnL"          
     ##  [5] "Prob"          "a0"            "aD"            "aE"           
@@ -853,17 +866,35 @@ play with.
 
 ![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-41-1.png)<!-- -->![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-41-2.png)<!-- -->![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-41-3.png)<!-- -->![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-41-4.png)<!-- -->![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-41-5.png)<!-- -->
 
-While it certainly didn’t converge, it’s headed in the right direction,
-and we can see the posterior is heavily weighted towards the aE/aD ratio
-we expect, e.g. very little to very little (because there is very little
-differentiation). We’ll save this in a data frame we’ll later use to
-make a nicer looking figure.
+While it didn’t quite converge, it’s probably as close as it’s going to
+get, and we can see the posterior is heavily weighted towards the aE/aD
+ratio we expect, e.g. very little to very little (because there is very
+little differentiation). We’ll save this in a data frame we’ll later use
+to make a nicer looking figure, and get the back-transformed values from
+our saved standard deviation constants.
 
 ``` r
 # convert for ggplotting
 sat.ratio <- aE/aD %>% as.data.frame()
 sat.bed.df <- cbind.data.frame(sat.ratio, rep("dichotomius_satanas", nrow(sat.ratio)))
 colnames(sat.bed.df) <- c("ratio","species")
+
+aD <- aD/geo.effect
+aE <- aE/env.effect
+mean(aE[-c(1:2000)]/aD[-c(1:2000)]) #0.0001822692
+```
+
+    ## [1] 0.002477588
+
+``` r
+sd(aE[-c(1:2000)]/aD[-c(1:2000)]) #6.475261e-05
+```
+
+    ## [1] 0.0008351278
+
+``` r
+aD <- aD[-c(1:2000)] # drop burnin again
+aE <- aE[-c(1:2000)] 
 ```
 
 Phew\! Only four more species to go. As I mentioned above, I’m going to
@@ -899,12 +930,12 @@ head(fst.df)
 ```
 
     ##    distance fst             species log_distance fst.adj
-    ## 2 0.3946041   0 dichotomius_satanas   -1.3415220       0
-    ## 3 0.7499033   0 dichotomius_satanas   -0.4152234       0
-    ## 4 1.7253411   0 dichotomius_satanas    0.7868816       0
-    ## 5 2.1694344   0 dichotomius_satanas    1.1173189       0
-    ## 6 1.6847584   0 dichotomius_satanas    0.7525417       0
-    ## 7 8.5030889   0 dichotomius_satanas    3.0879870       0
+    ## 2 0.1157304   0 dichotomius_satanas   -3.1111603       0
+    ## 3 0.2199334   0 dichotomius_satanas   -2.1848617       0
+    ## 4 0.5060120   0 dichotomius_satanas   -0.9827566       0
+    ## 5 0.6362566   0 dichotomius_satanas   -0.6523193       0
+    ## 6 0.4941098   0 dichotomius_satanas   -1.0170966       0
+    ## 7 2.4938052   0 dichotomius_satanas    1.3183488       0
 
 Now, we can subset each species out of this dataframe
 
@@ -915,12 +946,12 @@ head(sat.fst)
 ```
 
     ##    distance fst             species log_distance fst.adj
-    ## 2 0.3946041   0 dichotomius_satanas   -1.3415220       0
-    ## 3 0.7499033   0 dichotomius_satanas   -0.4152234       0
-    ## 4 1.7253411   0 dichotomius_satanas    0.7868816       0
-    ## 5 2.1694344   0 dichotomius_satanas    1.1173189       0
-    ## 6 1.6847584   0 dichotomius_satanas    0.7525417       0
-    ## 7 8.5030889   0 dichotomius_satanas    3.0879870       0
+    ## 2 0.1157304   0 dichotomius_satanas   -3.1111603       0
+    ## 3 0.2199334   0 dichotomius_satanas   -2.1848617       0
+    ## 4 0.5060120   0 dichotomius_satanas   -0.9827566       0
+    ## 5 0.6362566   0 dichotomius_satanas   -0.6523193       0
+    ## 6 0.4941098   0 dichotomius_satanas   -1.0170966       0
+    ## 7 2.4938052   0 dichotomius_satanas    1.3183488       0
 
 ``` r
 sat.mod <- lm(fst.adj ~ log_distance, sat.fst)
@@ -936,7 +967,7 @@ spec.mod <- lm(fst.adj ~ log_distance, spec.fst)
 1/as.vector(spec.mod$coefficients[2]) 
 ```
 
-    ## [1] -6558.657
+    ## [1] 13542.25
 
 ``` r
 # d. tess
@@ -968,7 +999,8 @@ affin.mod <- lm(fst.adj ~ log_distance, affin.fst)
 In all cases, the slope of our regression is negative, which results in
 an estimate of Wright’s NS which is more or less infinite, and
 consistent with panmixia (at least as inferred from our restricted
-sampling.) Not terrible surprising, but good to know.
+sampling.) Not terrible surprising, but good to know. Let’s plot these
+as well:
 
 A natural follow up question is trying to understand how genetic
 diversity changes across elevation in our species, as this can tell us
@@ -1031,29 +1063,121 @@ head(master.df)
 
 We can see columns for the theta value of each species, the name of the
 population, and an elevation. Each row is an estimate from a different
-RAD locus. Let’s plot these, along with the relationship between the
-natural log of geographic distance and adjusted fst values.
+RAD locus. Let’s plot these, after doing some manipulations to clean up
+population name discrepancies:
 
-    ## 
-    ## Attaching package: 'cowplot'
+![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-50-1.png)<!-- -->
 
-    ## The following object is masked from 'package:ggmap':
-    ## 
-    ##     theme_nothing
+We can see that theta doesn’t really change across elevation. We’ll back
+this up with some statistics, using mixed models to ask whether distance
+from range center affects genetic diversity, with population as a random
+effect:
 
-    ## The following object is masked from 'package:ggplot2':
-    ## 
-    ##     ggsave
+``` r
+library(lme4)
 
-![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-49-1.png)<!-- -->
+# run from file
+master.df <- read.csv("~/Dropbox/scarab_migration/data/master.theta.df.csv")
+master.df$species <- as.factor(master.df$species)
+master.df$species <- factor(master.df$species,levels=c("eurysternus_affin","dichotomius_podalirius",
+                                                       "deltochilum_tesselatum","deltochilum_speciocissimum","dichotomius_satanas"))
 
-We can see that theta doesn’t really change across elevation, and
-there’s no (positive) relationship between differentiation and
-distance. Taking all these results together, the last outstanding
-question is whether elevational ranges are at equilibrium, something
-this results certainly suggest and something that would tell us about
-the limits of Janzen’s predictions in this dataset. We’ll test this with
-demographic modeling using approximate Bayesian computation (ABC).
+# subset theta df 
+affin.mast <- master.df[master.df$species=="eurysternus_affin",]
+pod.mast <- master.df[master.df$species=="dichotomius_podalirius",]
+tess.mast <- master.df[master.df$species=="deltochilum_tesselatum",]
+spec.mast <- master.df[master.df$species=="deltochilum_speciocissimum",]
+sat.mast <- master.df[master.df$species=="dichotomius_satanas",]
+
+# calculate absolute value of distance from mean sampling elevation
+affin.mid <- mean(affin.mast$elevation)
+affin.mast$limit_score <- abs(affin.mast$elevation-affin.mid)
+pod.mid <- mean(pod.mast$elevation)
+pod.mast$limit_score <- abs(pod.mast$elevation-pod.mid)
+tess.mid <- mean(tess.mast$elevation)
+tess.mast$limit_score <- abs(tess.mast$elevation-tess.mid)
+spec.mid <- mean(spec.mast$elevation)
+spec.mast$limit_score <- abs(spec.mast$elevation-spec.mid)
+sat.mid <- mean(sat.mast$elevation)
+sat.mast$limit_score <- abs(sat.mast$elevation-sat.mid)
+
+# mixed models to see whether distance from range limit affects values of theta
+affin.theta.mod <- lmer(theta ~ limit_score + (1 | population), affin.mast)
+null.affin.mod <-  lmer(theta ~ (1 | population), affin.mast)
+anova(affin.theta.mod,null.affin.mod)  #X2=2.309(1), p=0.1286
+```
+
+    ## Data: affin.mast
+    ## Models:
+    ## null.affin.mod: theta ~ (1 | population)
+    ## affin.theta.mod: theta ~ limit_score + (1 | population)
+    ##                 Df     AIC     BIC logLik deviance Chisq Chi Df Pr(>Chisq)
+    ## null.affin.mod   3 -1574.8 -1559.9 790.41  -1580.8                        
+    ## affin.theta.mod  4 -1575.1 -1555.2 791.56  -1583.1 2.309      1     0.1286
+
+``` r
+pod.theta.mod <- lmer(theta ~ limit_score + (1 | population), pod.mast)
+null.pod.mod <-  lmer(theta ~ (1 | population), pod.mast)
+anova(pod.theta.mod,null.pod.mod)  #X2=2.276(1), p=0.1314
+```
+
+    ## Data: pod.mast
+    ## Models:
+    ## null.pod.mod: theta ~ (1 | population)
+    ## pod.theta.mod: theta ~ limit_score + (1 | population)
+    ##               Df     AIC     BIC logLik deviance Chisq Chi Df Pr(>Chisq)
+    ## null.pod.mod   3 -5578.1 -5559.4 2792.1  -5584.1                        
+    ## pod.theta.mod  4 -5578.4 -5553.4 2793.2  -5586.4 2.276      1     0.1314
+
+``` r
+tess.theta.mod <- lmer(theta ~ limit_score + (1 | population), tess.mast)
+null.tess.mod <-  lmer(theta ~ (1 | population), tess.mast)
+anova(tess.theta.mod,null.tess.mod)  #X2=0.9443(1), p=0.3312
+```
+
+    ## Data: tess.mast
+    ## Models:
+    ## null.tess.mod: theta ~ (1 | population)
+    ## tess.theta.mod: theta ~ limit_score + (1 | population)
+    ##                Df    AIC    BIC logLik deviance  Chisq Chi Df Pr(>Chisq)
+    ## null.tess.mod   3 -23466 -23443  11736   -23472                         
+    ## tess.theta.mod  4 -23465 -23434  11736   -23473 0.9443      1     0.3312
+
+``` r
+spec.theta.mod <- lmer(theta ~ limit_score + (1 | population), spec.mast)
+null.spec.mod <-  lmer(theta ~ (1 | population), spec.mast)
+anova(spec.theta.mod,null.spec.mod)  #X2=2.045(1), p=0.1527
+```
+
+    ## Data: spec.mast
+    ## Models:
+    ## null.spec.mod: theta ~ (1 | population)
+    ## spec.theta.mod: theta ~ limit_score + (1 | population)
+    ##                Df    AIC    BIC logLik deviance Chisq Chi Df Pr(>Chisq)
+    ## null.spec.mod   3 -98616 -98589  49311   -98622                        
+    ## spec.theta.mod  4 -98616 -98580  49312   -98624 2.045      1     0.1527
+
+``` r
+sat.theta.mod <- lmer(theta ~ limit_score + (1 | population), sat.mast)
+null.sat.mod <-  lmer(theta ~ (1 | population), sat.mast)
+anova(sat.theta.mod,null.sat.mod)  #X2=0.9191(1), p=0.3377
+```
+
+    ## Data: sat.mast
+    ## Models:
+    ## null.sat.mod: theta ~ (1 | population)
+    ## sat.theta.mod: theta ~ limit_score + (1 | population)
+    ##               Df    AIC    BIC logLik deviance  Chisq Chi Df Pr(>Chisq)
+    ## null.sat.mod   3 -18616 -18594 9311.0   -18622                         
+    ## sat.theta.mod  4 -18615 -18586 9311.5   -18623 0.9191      1     0.3377
+
+In all cases, there’s no significant change in diversity.
+
+Taking all these results together, the last outstanding question is
+whether elevational ranges are at equilibrium, something this results
+certainly suggest and something that would tell us about the limits of
+Janzen’s predictions in this dataset. We’ll test this with demographic
+modeling using approximate Bayesian computation (ABC).
 
 First, we need to createa a .vcf file without distortions to the SFS.
 We’ll return to the raw .vcf for each species, and again apply a
@@ -1117,8 +1241,8 @@ sat.growth.model <- coal_model(99, 50, 3) +
   sumstat_sfs()
 
 # simulate data
-sat.null.sim <- simulate(sat.null.model, nsim = 2000, seed = 69)
-sat.growth.sim <- simulate(sat.growth.model, nsim = 2000, seed = 32)
+sat.null.sim <- simulate(sat.null.model, nsim = 100000, seed = 69)
+sat.growth.sim <- simulate(sat.growth.model, nsim = 100000, seed = 32)
 
 # create params and sumstts for abc
 sat.null.param <- create_abc_param(sat.null.sim, sat.null.model)
@@ -1132,7 +1256,7 @@ sat.growth.post <- abc(sat.sfs, sat.growth.param, sat.growth.sumstat, 0.05, meth
 
 # prep data for model 
 sat.sumstat.merge <- rbind(sat.null.sumstat, sat.growth.sumstat)
-sat.index <- c(rep("null",2000),rep("growth",2000))
+sat.index <- c(rep("null",100000),rep("growth",100000))
 
 # check ability to distinguish models
 sat.cv.modsel <- cv4postpr(sat.index, sat.sumstat.merge, nval=5, tols=c(.05,.1), method="rejection")
@@ -1161,7 +1285,7 @@ We’ll use our usual species order. First, the dataframe manipulation.
 
 Now, the plotting:
 
-![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-53-1.png)<!-- -->![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-53-2.png)<!-- -->
+![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-55-1.png)<!-- -->![](scarab_analysis_notebook_files/figure-gfm/unnamed-chunk-55-2.png)<!-- -->
 
 In all but one compairson (for *E. affin*; you read these matrices as
 the Bayes Factor value for model comparisons from the x axis to the y

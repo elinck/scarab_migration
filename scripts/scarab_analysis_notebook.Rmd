@@ -147,14 +147,15 @@ df.colonso <- localities[localities$transect=='colonso',]
 ```
 
 
-We'll use the "Darjeeling1" palette from the [wesanderson package](https://github.com/karthik/wesanderson), but build a custom palette so we can hold colors constant across the levels of our sampling localities. 
+We'll use the "BottleRocket2" palette from the [wesanderson package](https://github.com/karthik/wesanderson), but build a custom palette so we can hold colors constant across the levels of our sampling localities. 
 
 
 ```{r}
+# set palette
 scale_fill_wes <- function(...){
   ggplot2:::manual_scale(
     'fill', 
-    values = setNames(wes_palette("Darjeeling1", 13, type = "continuous"), levels(localities$population)), 
+    values = setNames(wes_palette("BottleRocket2", 13, type = "continuous"), levels(localities$short_locality)), 
     ...
   )
 }
@@ -162,7 +163,7 @@ scale_fill_wes <- function(...){
 scale_color_wes <- function(...){
   ggplot2:::manual_scale(
     'color', 
-    values = setNames(wes_palette("Darjeeling1", 13, type = "continuous"), levels(localities$population)), 
+    values = setNames(wes_palette("BottleRocket2", 13, type = "continuous"), levels(localities$short_locality)), 
     ...
   )
 }
@@ -175,28 +176,30 @@ library(patchwork, verbose=FALSE)
 
 p1 <- ggmap(pipeline) +
   theme_bw() +
-  geom_point(data = df.pipeline,
-             aes(x = long, y = lat,size=elevation, fill = population),
-             pch=21)+
-  scale_fill_wes(name="locality") +
-  ggtitle("pipeline") +
-  xlab("longitude") +
-  ylab("latitude") +
+  geom_jitter(data = df.pipeline,
+              aes(x = long, y = lat, color = short_locality, size=elevation),
+              pch=1)+
+  scale_color_wes(name="Locality") +
+  ggtitle("Pipeline") +
+  xlab("Longitude") +
+  ylab("Latitude") +
+  labs(size = "Elevation (m)") +
   theme(
     strip.background = element_blank(),
     panel.grid = element_blank()) +
   guides(fill = guide_legend(order=1),
          size = guide_legend(order=2))
 
-p2 <- ggmap(colonso, alpha=0.2) +
+p2 <- ggmap(colonso) +
   theme_bw() +
-  geom_point(data = df.colonso,
-             aes(x = long, y = lat, fill = population, size=elevation),
-             pch=21)+
-  scale_fill_wes(name="locality") +
-  ggtitle("colonso de chalupas") +
-  xlab("longitude") +
-  ylab("latitude") +
+  geom_jitter(data = df.colonso,
+             aes(x = long, y = lat, color = short_locality, size=elevation),
+             pch=1)+
+  scale_color_wes(name="Locality") +
+  ggtitle("Colonso de Chalupas") +
+  xlab("Longitude") +
+  ylab("Latitude") +
+  labs(size = "Elevation (m)") +
   theme(
     strip.background = element_blank(),
     panel.grid = element_blank()) +
@@ -251,13 +254,13 @@ satanas.pc <- merge(satanas.pc, localities, by.x = "sample", by.y = "ddocent_ID"
 
 a <- ggplot(data=satanas.pc,aes(x=PC1,y=PC2,col=satanas.pc$short_locality)) + 
   theme_classic() +
-  geom_point()+
-  scale_color_wes("locality")
+  geom_jitter(pch=1,size=2.5)+
+  scale_color_wes(name="locality") 
 
 b <- ggplot(data=satanas.pc,aes(x=elevation,y=PC1,col=satanas.pc$short_locality)) + 
   theme_classic() +
-  geom_point()+
-  scale_color_wes("locality")
+  geom_jitter(pch=1,size=2.5)+
+  scale_color_wes(name="locality") 
 
 a + b
 
@@ -291,12 +294,12 @@ Plots:
 
 c <- ggplot(data=spec.pc,aes(x=PC1,y=PC2,col=spec.pc$short_locality)) + 
   theme_classic() +
-  geom_jitter()+
+  geom_jitter(pch=1,size=2.5)+
   scale_color_wes("locality")
 
 d <- ggplot(data=spec.pc,aes(x=elevation,y=PC1,col=spec.pc$short_locality)) + 
   theme_classic() +
-  geom_point()+
+  geom_jitter(pch=1,size=2.5)+
   scale_color_wes("locality")
 
 c + d
@@ -330,12 +333,12 @@ Plots:
 
 e <- ggplot(data=tess.pc,aes(x=PC1,y=PC2,col=tess.pc$short_locality)) + 
   theme_classic() +
-  geom_jitter()+
+  geom_jitter(pch=1,size=2.5)+
   scale_color_wes("locality")
 
 f <- ggplot(data=tess.pc,aes(x=elevation,y=PC1,col=tess.pc$short_locality)) + 
   theme_classic() +
-  geom_point()+
+  geom_jitter(pch=1,size=2.5)+
   scale_color_wes("locality")
 
 e + f
@@ -369,12 +372,12 @@ Plots:
 ```{r, echo=FALSE}
 g <- ggplot(data=pod.pc,aes(x=PC1,y=PC2,col=pod.pc$short_locality)) + 
   theme_classic() +
-  geom_jitter()+
+  geom_jitter(pch=1,size=2.5)+
   scale_color_wes("locality")
 
 h <- ggplot(data=pod.pc,aes(x=elevation,y=PC1,col=pod.pc$short_locality)) + 
   theme_classic() +
-  geom_point()+
+  geom_jitter(pch=1,size=2.5)+
   scale_color_wes("locality")
 
 g + h
@@ -408,12 +411,12 @@ Plots:
 
 i <- ggplot(data=affin.pc,aes(x=PC1,y=PC2,col=affin.pc$short_locality)) + 
   theme_classic() +
-  geom_jitter()+
+  geom_jitter(pch=1,size=2.5)+
   scale_color_wes("locality")
 
 j <- ggplot(data=affin.pc,aes(x=elevation,y=PC1,col=affin.pc$short_locality)) + 
   theme_classic() +
-  geom_point()+
+  geom_jitter(pch=1,size=2.5)+
   scale_color_wes("locality")
 
 i + j
@@ -448,18 +451,21 @@ affin.pc <- merge(affin.pc, localities, by.x = "sample", by.y = "ddocent_ID")
 master.pc.df <- rbind.data.frame(satanas.pc,spec.pc,tess.pc,pod.pc,affin.pc)
 ```
 
-Now' let's plot all these together with faceting.
+Now let's plot all these together with faceting.
 
 ```{r,echo=FALSE}
 ### plot all with faceting
 
-k <- ggplot(data=master.pc.df,aes(x=elevation,y=PC1,col=master.pc.df$pop)) + 
+k <- ggplot(data=master.pc.df,aes(x=elevation,y=PC1,color=master.pc.df$short_locality)) + 
   theme_bw() +
-  geom_jitter(size=2.5)+
+  geom_jitter(pch=1,size=2.5)+
   scale_color_wes(name="locality") +
   facet_wrap(~species.x, scales="free") +
+  xlab("Elevation (m)") +
   theme(
     strip.background = element_blank(),
+    strip.text = element_text(face = "italic"),
+    legend.position="none",
     panel.grid = element_blank()) 
 
 k
@@ -638,7 +644,7 @@ bcftools +prune -l 0.1 -w 1000 d_pod_filtered.FIL.recode.vcf -Ov -o d_pod.LD.vcf
 bcftools +prune -l 0.1 -w 1000 e_affin_filtered.strict.recode.vcf -Ov -o e_affin.LD.vcf
 ```
 
-We need to read in locality data and use this tp calculate geographic distance with [fossil's](https://cran.r-project.org/web/packages/fossil/index.html) `earth.dist()` function. 
+We need to read in locality data and use this tp calculate geographic distance with [fossil's](https://cran.r-project.org/web/packages/fossil/index.html) `earth.dist()` function. We normalize the geographic distances by dividing by their standard deviation to help with chain mixing, saving the stand deviation constant to later backtransform our variables: 
 
 ```{r, message=FALSE}
 library(adegenet)
@@ -665,9 +671,12 @@ pop.loc <- cbind.data.frame(unique(localities$long),unique(localities$lat),uniqu
 colnames(pop.loc) <- c("long", "lat", "pop")
 geodist <- earth.dist(pop.loc[c("long", "lat")], dist = FALSE)
 
+# standardize geographic distances
+geo.effect <- sd(c(geodist)) # save effect size
+geodist <- geodist/sd(c(geodist))
 ```
 
-We then will calculate *environmental* distances using the [raster](https://cran.r-project.org/web/packages/raster/index.html) package, which directly collects data from the [WorldClim climate database](https://www.worldclim.org/). In addition to our elevational data, we'll use mean annual temperature and mean annual precipitation (the bio1 and bio12 variables). 
+We then will calculate *environmental* distances using the [raster](https://cran.r-project.org/web/packages/raster/index.html) package, which directly collects data from the [WorldClim climate database](https://www.worldclim.org/). In addition to our elevational data, we'll use mean annual temperature and mean annual precipitation (the bio1 and bio12 variables). Again, we'll normalize these and save the standard deviation constant. 
 
 ```{r, message=FALSE}
 # calculate environmental distance
@@ -685,6 +694,10 @@ rownames(loc.uniq) <- loc.uniq$population
 loc.uniq <- as.data.frame(loc.uniq)
 loc.uniq <- loc.uniq[,-which(names(loc.uniq) %in% c("population"))]
 env.dist.all <- dist(loc.uniq, diag = TRUE, upper = TRUE)
+
+# standardize env distances
+env.effect <- sd(c(env.dist.all)) # save effect size
+env.dist.all <- env.dist.all/sd(c(env.dist.all))
 ```
 
 Now we have to do some serious manipulation to the format of our genotypic data to get it into BEDASSLE. I'll run through the whole procedure (from data frame manipulation to the MCMC run) for *D. satanas* in detail, and then keep it short for the remainder  of the species. (This code is also found in `scripts/bedassle.R`). First, we'll read our .vcf as usual, and convert it to adegenet's genpop format, which is pretty close to what BEDASSLE wants in that it is a summary of allele counts across populations. We'll set populations by grabbing the first part of each sample ID. 
@@ -781,102 +794,90 @@ colnames(satanas.env) <- NULL
 rownames(satanas.env) <- NULL
 ```
 
-Finally, we run the MCMC itself. Note the various parameters we can tweak. For now, we're only running it for 10,000 generations; for publication we're going to aim for 500K to 1000K.  
+Finally, we run the MCMC itself. Note the various parameters we can tweak. I've previously played around with short runs to tune step sizes; because of the low genetic differentiation in the data, it's difficult to get the chain to mix well. 
 
 ```{r, message=FALSE, eval=FALSE}
 # run MCMC for 10K gens
 MCMC(   
   counts = satanas.ac,
   sample_sizes = satanas.n,
-  D = satanas.geo,  # geographic distances
-  E = satanas.env,  # environmental distances
+  D = geodist,  # geographic distances
+  E = env.dist.all,  # environmental distances
   k = nrow(satanas.ac), loci = ncol(satanas.ac),  # dimensions of the data
   delta = 0.0001,  # a small, positive, number
-  aD_stp = 0.1,   # step sizes for the MCMC
-  aE_stp = 0.1,
+  aD_stp = 0.075,   # step sizes for the MCMC
+  aE_stp = 0.05,
   a2_stp = 0.025,
   thetas_stp = 0.2,
   mu_stp = 0.35,
-  ngen = 10000,        # number of steps (2e6)
-  printfreq = 100,  # print progress (10000)
-  savefreq = 100,     # save out current state
-  samplefreq = 2,     # record current state for posterior (2000)
+  ngen = 2000000,        # number of steps (2e6)
+  printfreq = 10000,  # print progress (10000)
+  savefreq = 1e5,     # save out current state
+  samplefreq = 250,     # record current state for posterior (2000)
   prefix = "/Users/ethanlinck/Dropbox/scarab_migration/bedassle/satanas_",   # filename prefix
   continue=FALSE,
-  continuing.params=NULL)
+  continuing.params=FALSE)
 ```
 
-Once this has run, we're going to perform some basic examination of how well the chain performed, using code and the procedure from [Peter Ralph's BEDASSLE tutorial](http://petrelharp.github.io/popgen-visualization-course/). I'll show the output so you can see the different objects we have to play with.
+Once this has run, we're going to perform some basic examination of how well the chain performed, using code and the procedure from [Peter Ralph's BEDASSLE tutorial](http://petrelharp.github.io/popgen-visualization-course/). I'll show the output (after dropping the first 25%  of the chain as burnin) so you can see the different objects we have to play with. 
 
 ```{r, message=FALSE, echo=FALSE}
 # check shit out
 show(load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/satanas_MCMC_output1.Robj", verbose = FALSE))
 layout(t(1:2))
-plot(aD[-(1:1000)], xlab="MCMC generation", ylab="value", main="aD")
-plot((aD_accept/aD_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
-plot(as.vector(aE)[-(1:1000)], xlab="MCMC generation", ylab="value", main="aE")
-plot((aE_accept/aE_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
-plot(a2[-(1:1000)], xlab="MCMC generation", ylab="value", main="a2")
-plot((a2_accept/a2_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
-plot(Prob[-(1:1000)], xlab="MCMC generation", main="log likelihood")
-plot((mu_accept/mu_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
-plot((thetas_accept/thetas_moves)[-(1:1000)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
-hist((aE/aD)[-(1:1000)],breaks=100,main="posterior of aE/aD ratio")
+plot(aD[-(1:2000)], xlab="MCMC generation", ylab="value", main="aD")
+plot((aD_accept/aD_moves)[-(1:2000)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
+plot(as.vector(aE)[-(1:2000)], xlab="MCMC generation", ylab="value", main="aE")
+plot((aE_accept/aE_moves)[-(1:2000)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
+plot(a2[-(1:2000)], xlab="MCMC generation", ylab="value", main="a2")
+plot((a2_accept/a2_moves)[-(1:2000)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
+plot(Prob[-(1:2000)], xlab="MCMC generation", main="log likelihood")
+plot((mu_accept/mu_moves)[-(1:2000)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
+plot((thetas_accept/thetas_moves)[-(1:2000)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
+hist((aE/aD)[-(1:2000)],breaks=100,main="posterior of aE/aD ratio")
 ```
 
-While it certainly didn't converge, it's headed in the right direction, and we can see the posterior is heavily weighted towards the aE/aD ratio we expect, e.g. very little to very little (because there is very little differentiation). We'll save this in a data frame we'll later use to make a nicer looking figure. 
+While it didn't quite converge, it's probably as close as it's going to get, and we can see the posterior is heavily weighted towards the aE/aD ratio we expect, e.g. very little to very little (because there is very little differentiation). We'll save this in a data frame we'll later use to make a nicer looking figure, and get the back-transformed values from our saved standard deviation constants. 
 
 ```{r, message=FALSE}
 # convert for ggplotting
 sat.ratio <- aE/aD %>% as.data.frame()
 sat.bed.df <- cbind.data.frame(sat.ratio, rep("dichotomius_satanas", nrow(sat.ratio)))
 colnames(sat.bed.df) <- c("ratio","species")
+
+aD <- aD/geo.effect
+aE <- aE/env.effect
+mean(aE[-c(1:2000)]/aD[-c(1:2000)]) #0.0001822692
+sd(aE[-c(1:2000)]/aD[-c(1:2000)]) #6.475261e-05
+aD <- aD[-c(1:2000)] # drop burnin again
+aE <- aE[-c(1:2000)] 
 ```
 
 Phew! Only four more species to go. As I mentioned above, I'm going to skip the details of these runs and get to what we're interested in, which is the posterior probabilities of the aE/aD ratio for all of them. To do this, I'm going to load the completed MCMC outputs from all species, and merge the ratio into a data frame. 
 
 ```{r, message=FALSE, echo=FALSE}
-load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/satanas_MCMC_output1.Robj", verbose = FALSE)
-sat.ratio <- aE/aD %>% as.data.frame()
-sat.bed.df <- cbind.data.frame(sat.ratio, rep("dichotomius_satanas", nrow(sat.ratio)))
-colnames(sat.bed.df) <- c("ratio","species")
-
-load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/spec_MCMC_output1.Robj", verbose = FALSE)
-spec.ratio <- aE/aD %>% as.data.frame()
-spec.bed.df <- cbind.data.frame(spec.ratio, rep("deltochilum_speciocissimum", nrow(spec.ratio)))
-colnames(spec.bed.df) <- c("ratio","species")
-
-load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/tess_MCMC_output1.Robj", verbose = FALSE)
-tess.ratio <- aE/aD %>% as.data.frame()
-tess.bed.df <- cbind.data.frame(tess.ratio, rep("deltochilum_tesselatum", nrow(tess.ratio)))
-colnames(tess.bed.df) <- c("ratio","species")
-
-load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/tess_MCMC_output1.Robj", verbose = FALSE)
-pod.ratio <- aE/aD %>% as.data.frame()
-pod.bed.df <- cbind.data.frame(pod.ratio, rep("dichotomius_podalirius", nrow(pod.ratio)))
-colnames(pod.bed.df) <- c("ratio","species")
-
-load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/affin_MCMC_output1.Robj", verbose = FALSE)
-affin.ratio <- aE/aD %>% as.data.frame()
-affin.bed.df <- cbind.data.frame(affin.ratio, rep("eurysternus_affin", nrow(affin.ratio)))
-colnames(affin.bed.df) <- c("ratio","species")
-
-bed.df <- rbind.data.frame(sat.bed.df, spec.bed.df, tess.bed.df, pod.bed.df, affin.bed.df)
+bed.df <- read.csv("~/Dropbox/scarab_migration/data/bedassle_species.csv")[-1]
+bed.df$species <- factor(bed.df$species,levels=c("eurysternus_affin","dichotomius_podalirius",
+                                                 "deltochilum_tesselatum","deltochilum_speciocissimum","dichotomius_satanas"))
+levels(bed.df$species) <- c("Eurysternus affin flocossus", "Dichotomius podalirius", "Deltochilum tesselatum", "Deltochilum speciocissimum", "Dichotomius satanas")
 
 ```
 
 Now, let's check it out.
 
 ```{r, message=FALSE, echo=FALSE, warning=FALSE}
-ggplot(bed.df, aes(y=ratio, fill=species)) + 
+ggplot(bed.df, aes(y=ratio, x=species, fill=species)) + 
   theme_bw() +
-  geom_boxplot(alpha=0.6, binwidth = 0.25) +
+  geom_boxplot(alpha=0.7) +
   theme(axis.text.x = element_blank()) +
-  scale_fill_manual(values=wes_palette(n=5, name="FantasticFox1")) +
-  ylim(0,100) +
+  scale_fill_manual(values=wes_palette(n=5, name="Cavalcanti1")) +
+  ylim(0,0.075) +
+  labs(fill= "Species") +
   ylab("aE/aD ratio") +
   theme(
     strip.background = element_blank(),
+    axis.title.x=element_blank(),
+    legend.text = element_text(face = "italic"),
     panel.grid = element_blank())
 ```
 
@@ -925,7 +926,20 @@ affin.mod <- lm(fst.adj ~ log_distance, affin.fst)
 1/as.vector(affin.mod$coefficients[2])
 ```
 
-In all cases, the slope of our regression is negative, which results in an estimate of Wright's NS which is more or less infinite, and consistent with panmixia (at least as inferred from our restricted sampling.) Not terrible surprising, but good to know. 
+In all cases, the slope of our regression is negative, which results in an estimate of Wright's NS which is more or less infinite, and consistent with panmixia (at least as inferred from our restricted sampling.) Not terrible surprising, but good to know. Let's plot these as well: 
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+p5 <- ggplot(fst.df, aes(x=log_distance, y=fst)) +
+  theme_bw() +
+  geom_point(pch=1,size=2.5) +
+  facet_wrap(~ species, ncol=1,scales ="free") +
+  geom_smooth(method="lm",linetype="dashed",color="black",se = FALSE) +
+  labs(y=expression(F[ST]/(1-F[ST])), x="ln(Distance)") +
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text(face = "italic"),
+    panel.grid = element_blank())
+```
 
 A natural follow up question is trying to understand how genetic diversity changes across elevation in our species, as this can tell us something about the nature of their elevational range limits, e.g. that they either are or are not affected by declining habitat quality or edge effects. We'll use the [pegas](https://cran.r-project.org/web/packages/pegas/index.html) package to estimate theta (the product of the effective population size and the neutral mutation rate) using mean homozygosity from gene frequencies. 
 
@@ -964,41 +978,89 @@ master.df <- read.csv("~/Dropbox/scarab_migration/data/master.theta.df.csv")[-1]
 head(master.df)
 ```
 
-We can see columns for the theta value of each species, the name of the population, and an elevation. Each row is an estimate from a different RAD locus. Let's plot these, along with the relationship between the natural log of geographic distance and adjusted fst values. 
+We can see columns for the theta value of each species, the name of the population, and an elevation. Each row is an estimate from a different RAD locus. Let's plot these, after doing some manipulations to clean up population name discrepancies: 
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=FALSE}
 library(cowplot, verbose = FALSE)
 
+master.df <- read.csv("~/Dropbox/scarab_migration/data/master.theta.df.csv")
 master.df$species <- as.factor(master.df$species)
 master.df$species <- factor(master.df$species,levels=c("eurysternus_affin","dichotomius_podalirius",
                                                        "deltochilum_tesselatum","deltochilum_speciocissimum","dichotomius_satanas"))
-fst.df$species <- as.factor(fst.df$species)
-fst.df$species <- factor(fst.df$species,levels=c("eurysternus_affin","dichotomius_podalirius",
-                                                 "deltochilum_tesselatum","deltochilum_speciocissimum","dichotomius_satanas"))
+levels(master.df$species) <- c("Eurysternus affin flocossus", "Dichotomius podalirius", "Deltochilum tesselatum", "Deltochilum speciocissimum", "Dichotomius satanas")
+master.df$population <- as.character(master.df$population)
+master.df$population[which(master.df$population=="MA2150")] <- "Macucaloma"
+master.df$population[which(master.df$population=="YY2150")] <- "Yanayacu"
+master.df$population[which(master.df$population=="HU3")] <- "HU-3"
+master.df$population[which(master.df$population=="HU4")] <- "HU-4"
+master.df$population[which(master.df$population=="CC1")] <- "730"
+colnames(master.df)[3] <- "short_locality"
 
-t.c <- ggplot(master.df, aes(x=elevation, y=theta, fill=population)) +
+ggplot(master.df, aes(x=elevation, y=theta, fill=short_locality)) +
   theme_bw() +
   geom_boxplot(alpha=0.7, width=50) +
-  scale_fill_wes() +
+  scale_fill_wes(name="Locality") +
   stat_summary(fun.y=median, geom="smooth", aes(group=1), linetype="dashed", color = "black") +
   facet_wrap(~ species, ncol = 1) +
+  labs(y=expression(theta),x="Elevation (m)") +
   theme(
     strip.background = element_blank(),
+    strip.text = element_text(face = "italic"),
     panel.grid = element_blank())
 
-f.c <- ggplot(fst.df, aes(x=log_distance, y=fst)) +
-  theme_bw() +
-  geom_point(pch=1,size=2) +
-  facet_wrap(~ species, ncol=1) +
-  ylab("fst/(1-fst)") +
-  theme(
-    strip.background = element_blank(),
-    panel.grid = element_blank()) 
-
-plot_grid(t.c, f.c, labels = "AUTO", align = 'h', label_size = 12, ncol = 2, rel_widths = c(1,0.5))
 ```
 
-We can see that theta doesn't really change across elevation, and there's no (positive) relationship between differentiation and distance. Taking all these results together, the last outstanding question is whether elevational ranges are at equilibrium, something this results certainly suggest and something that would tell us about the limits of Janzen's predictions in this dataset. We'll test this with demographic modeling using approximate Bayesian computation (ABC). 
+We can see that theta doesn't really change across elevation. We'll back this up with some statistics, using mixed models to ask whether distance from range center affects genetic diversity, with population as a random effect: 
+
+```{r, message=FALSE}
+library(lme4)
+
+# run from file
+master.df <- read.csv("~/Dropbox/scarab_migration/data/master.theta.df.csv")
+master.df$species <- as.factor(master.df$species)
+master.df$species <- factor(master.df$species,levels=c("eurysternus_affin","dichotomius_podalirius",
+                                                       "deltochilum_tesselatum","deltochilum_speciocissimum","dichotomius_satanas"))
+
+# subset theta df 
+affin.mast <- master.df[master.df$species=="eurysternus_affin",]
+pod.mast <- master.df[master.df$species=="dichotomius_podalirius",]
+tess.mast <- master.df[master.df$species=="deltochilum_tesselatum",]
+spec.mast <- master.df[master.df$species=="deltochilum_speciocissimum",]
+sat.mast <- master.df[master.df$species=="dichotomius_satanas",]
+
+# calculate absolute value of distance from mean sampling elevation
+affin.mid <- mean(affin.mast$elevation)
+affin.mast$limit_score <- abs(affin.mast$elevation-affin.mid)
+pod.mid <- mean(pod.mast$elevation)
+pod.mast$limit_score <- abs(pod.mast$elevation-pod.mid)
+tess.mid <- mean(tess.mast$elevation)
+tess.mast$limit_score <- abs(tess.mast$elevation-tess.mid)
+spec.mid <- mean(spec.mast$elevation)
+spec.mast$limit_score <- abs(spec.mast$elevation-spec.mid)
+sat.mid <- mean(sat.mast$elevation)
+sat.mast$limit_score <- abs(sat.mast$elevation-sat.mid)
+
+# mixed models to see whether distance from range limit affects values of theta
+affin.theta.mod <- lmer(theta ~ limit_score + (1 | population), affin.mast)
+null.affin.mod <-  lmer(theta ~ (1 | population), affin.mast)
+anova(affin.theta.mod,null.affin.mod)  #X2=2.309(1), p=0.1286
+pod.theta.mod <- lmer(theta ~ limit_score + (1 | population), pod.mast)
+null.pod.mod <-  lmer(theta ~ (1 | population), pod.mast)
+anova(pod.theta.mod,null.pod.mod)  #X2=2.276(1), p=0.1314
+tess.theta.mod <- lmer(theta ~ limit_score + (1 | population), tess.mast)
+null.tess.mod <-  lmer(theta ~ (1 | population), tess.mast)
+anova(tess.theta.mod,null.tess.mod)  #X2=0.9443(1), p=0.3312
+spec.theta.mod <- lmer(theta ~ limit_score + (1 | population), spec.mast)
+null.spec.mod <-  lmer(theta ~ (1 | population), spec.mast)
+anova(spec.theta.mod,null.spec.mod)  #X2=2.045(1), p=0.1527
+sat.theta.mod <- lmer(theta ~ limit_score + (1 | population), sat.mast)
+null.sat.mod <-  lmer(theta ~ (1 | population), sat.mast)
+anova(sat.theta.mod,null.sat.mod)  #X2=0.9191(1), p=0.3377
+```
+
+In all cases, there's no significant change in diversity.  
+
+Taking all these results together, the last outstanding question is whether elevational ranges are at equilibrium, something this results certainly suggest and something that would tell us about the limits of Janzen's predictions in this dataset. We'll test this with demographic modeling using approximate Bayesian computation (ABC). 
 
 First, we need to createa a .vcf file without distortions to the SFS. We'll return to the raw .vcf for each species, and again apply a series of filtering steps, but avoid anything that affects the SFS, e..g. minor allele frequency filters. 
 
@@ -1049,8 +1111,8 @@ sat.growth.model <- coal_model(99, 50, 3) +
   sumstat_sfs()
 
 # simulate data
-sat.null.sim <- simulate(sat.null.model, nsim = 2000, seed = 69)
-sat.growth.sim <- simulate(sat.growth.model, nsim = 2000, seed = 32)
+sat.null.sim <- simulate(sat.null.model, nsim = 100000, seed = 69)
+sat.growth.sim <- simulate(sat.growth.model, nsim = 100000, seed = 32)
 
 # create params and sumstts for abc
 sat.null.param <- create_abc_param(sat.null.sim, sat.null.model)
@@ -1064,7 +1126,7 @@ sat.growth.post <- abc(sat.sfs, sat.growth.param, sat.growth.sumstat, 0.05, meth
 
 # prep data for model 
 sat.sumstat.merge <- rbind(sat.null.sumstat, sat.growth.sumstat)
-sat.index <- c(rep("null",2000),rep("growth",2000))
+sat.index <- c(rep("null",100000),rep("growth",100000))
 
 # check ability to distinguish models
 sat.cv.modsel <- cv4postpr(sat.index, sat.sumstat.merge, nval=5, tols=c(.05,.1), method="rejection")
@@ -1114,15 +1176,16 @@ ggplot(data = melted.bayes.df, aes(x=Var1, y=Var2, fill=value)) +
   facet_wrap(~species) +
   theme(
     strip.background = element_blank(),
+    strip.text = element_text(face = "italic"),
     panel.grid = element_blank()) 
 
 ggplot(growth.df, aes(x=value, fill=species)) + 
-  theme_bw() +
+  theme_classic() +
   geom_density(alpha=0.6) +
-  theme(axis.text.x = element_text(angle = 60, hjust = 1, size=9)) +
-  scale_fill_manual(values=wes_palette(n=5, name="FantasticFox1")) +
-  #xlim(0,20) +
-  #ylim(0,2000) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1, size=9),
+        legend.text = element_text(face = "italic")) +
+  labs(fill= "Species") +
+  scale_fill_manual(values=wes_palette(n=5, name="Cavalcanti1")) +
   facet_wrap(~param, scales="free") +
   theme(
     strip.background = element_blank(),

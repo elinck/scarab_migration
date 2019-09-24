@@ -71,6 +71,10 @@ pop.loc.sat <- pop.loc[!pop.loc$pop %in% drop.pop,]
 droplevels(pop.loc.sat)
 satanas.geo <- earth.dist(pop.loc.sat[c("long", "lat")], dist = FALSE)
 
+# standardize geographic distances
+geo.effect <- sd(c(satanas.geo)) # save effect size
+satanas.geo <- satanas.geo/sd(c(satanas.geo))
+
 # turn to vectors
 sat.dist <- as.vector(satanas.geo)
 sat.gen <- as.vector(satanas.p.fst.all)
@@ -106,6 +110,10 @@ satanas.env <- as.matrix(env.dist.upper)
 colnames(satanas.env) <- NULL
 rownames(satanas.env) <- NULL
 
+# standardize env distances
+env.effect <- sd(c(satanas.env)) # save effect size
+satanas.env <- satanas.env/sd(c(satanas.env))
+
 MCMC(   
   counts = satanas.ac,
   sample_sizes = satanas.n,
@@ -113,74 +121,41 @@ MCMC(
   E = satanas.env,  # environmental distances
   k = nrow(satanas.ac), loci = ncol(satanas.ac),  # dimensions of the data
   delta = 0.0001,  # a small, positive, number
-  aD_stp = 0.6,   # step sizes for the MCMC
-  aE_stp = 0.0685,
-  a2_stp = 0.0665,
+  aD_stp = 0.075,   # step sizes for the MCMC
+  aE_stp = 0.05,
+  a2_stp = 0.025,
   thetas_stp = 0.2,
   mu_stp = 0.35,
-  ngen = 50000,        # number of steps (2e6)
-  printfreq = 250,  # print progress (10000)
-  savefreq = 250,     # save out current state
-  samplefreq = 2,     # record current state for posterior (2000)
-  prefix = "/Users/ethanlinck/Dropbox/scarab_migration/bedassle/satanas_test_",   # filename prefix
-  continue=FALSE,
-  continuing.params=NULL)
-
-# check shit out
-show(load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/satanas_test_MCMC_output1.Robj"))
-layout(t(1:2))
-plot(aD, xlab="MCMC generation", ylab="value", main="aD")
-plot((aD_accept/aD_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
-plot(as.vector(aE)[-(1:40)], xlab="MCMC generation", ylab="value", main="aE")
-plot((aE_accept/aE_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
-plot(a2[-(1:40)], xlab="MCMC generation", ylab="value", main="a2")
-plot((a2_accept/a2_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
-plot(Prob[-(1:40)], xlab="MCMC generation", main="log likelihood")
-plot((mu_accept/mu_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
-plot((thetas_accept/thetas_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
-hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
-hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
-mean(aE/aD)
-sd(aE/aD)
-
-
-# run MCMC for 10K gens
-MCMC(   
-  counts = satanas.ac,
-  sample_sizes = satanas.n,
-  D = satanas.geo,  # geographic distances
-  E = satanas.env,  # environmental distances
-  k = nrow(satanas.ac), loci = ncol(satanas.ac),  # dimensions of the data
-  delta = 0.0001,  # a small, positive, number
-  aD_stp = 0.2,   # step sizes for the MCMC
-  aE_stp = 0.25,
-  a2_stp = 0.25,
-  thetas_stp = 0.2,
-  mu_stp = 0.35,
-  ngen = 1000000,        # number of steps (2e6)
-  printfreq = 250,  # print progress (10000)
-  savefreq = 250,     # save out current state
+  ngen = 2000000,        # number of steps (2e6)
+  printfreq = 10000,  # print progress (10000)
+  savefreq = 1e5,     # save out current state
   samplefreq = 250,     # record current state for posterior (2000)
   prefix = "/Users/ethanlinck/Dropbox/scarab_migration/bedassle/satanas_",   # filename prefix
   continue=FALSE,
-  continuing.params=NULL)
+  continuing.params=FALSE)
 
 # check shit out
 show(load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/satanas_MCMC_output1.Robj"))
 layout(t(1:2))
 plot(aD, xlab="MCMC generation", ylab="value", main="aD")
-plot((aD_accept/aD_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
-plot(as.vector(aE)[-(1:40)], xlab="MCMC generation", ylab="value", main="aE")
-plot((aE_accept/aE_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
-plot(a2[-(1:40)], xlab="MCMC generation", ylab="value", main="a2")
-plot((a2_accept/a2_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
-plot(Prob[-(1:40)], xlab="MCMC generation", main="log likelihood")
-plot((mu_accept/mu_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
+plot((aD_accept/aD_moves), xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
+plot(as.vector(aE), xlab="MCMC generation", ylab="value", main="aE")
+plot((aE_accept/aE_moves), xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
+plot(a2, xlab="MCMC generation", ylab="value", main="a2")
+plot((a2_accept/a2_moves), xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
+plot(Prob, xlab="MCMC generation", main="log likelihood")
+plot((mu_accept/mu_moves), xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
 plot((thetas_accept/thetas_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
-hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
-hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
-mean(aE/aD)
-sd(aE/aD)
+hist((aE/aD),breaks=100,main="posterior of aE/aD ratio")
+
+# back transform to get  per km effect
+aD <- aD/geo.effect
+aE <- aE/env.effect
+mean(aE[-c(1:2000)]/aD[-c(1:2000)]) #0.0006452604
+sd(aE[-c(1:2000)]/aD[-c(1:2000)]) #0.0002174998
+aD <- aD[-c(1:2000)] # drop burnin again
+aE <- aE[-c(1:2000)] 
+
 
 # convert for ggplotting
 sat.ratio <- aE/aD %>% as.data.frame()
@@ -235,6 +210,10 @@ pop.loc.spec <- pop.loc[!pop.loc$pop %in% drop.pop,]
 droplevels(pop.loc.spec)
 spec.geo <- earth.dist(pop.loc.spec[c("long", "lat")], dist = FALSE)
 
+# standardize geographic distances
+spec.geo.effect <- sd(c(spec.geo)) # save effect size
+spec.geo <- spec.geo/sd(c(spec.geo))
+
 # turn to vectors
 spec.dist <- as.vector(spec.geo)
 spec.gend <- as.vector(spec.p.fst.all)
@@ -252,6 +231,10 @@ spec.env <- spec.env[,!colnames(spec.env) %in% drop.pop]
 colnames(spec.env) <- NULL
 rownames(spec.env) <- NULL
 
+# standardize env distances
+spec.env.effect <- sd(c(spec.env)) # save effect size
+spec.env <- spec.env/sd(c(spec.env))
+
 # run MCMC for 100K gens
 MCMC(   
   counts = spec.ac,
@@ -260,34 +243,40 @@ MCMC(
   E = spec.env,  # environmental distances
   k = 5, loci = 13797,  # dimensions of the data
   delta = 0.0001,  # a small, positive, number
-  aD_stp = 0.2,   # step sizes for the MCMC
-  aE_stp = 0.25,
+  aD_stp = 0.,   # step sizes for the MCMC
+  aE_stp = 0.05,
   a2_stp = 0.25,
   thetas_stp = 0.2,
   mu_stp = 0.35,
-  ngen = 1000000,        # number of steps (2e6)
+  ngen = 10000,        # number of steps (2e6)
   printfreq = 250,  # print progress (10000)
   savefreq = 250,     # save out current state
-  samplefreq = 250,     # record current state for posterior (2000)
-  prefix = "/Users/ethanlinck/Dropbox/scarab_migration/bedassle/spec_",   # filename prefix
+  samplefreq = 2,     # record current state for posterior (2000)
+  prefix = "/Users/ethanlinck/Dropbox/scarab_migration/bedassle/spec_test",   # filename prefix
   continue=FALSE,
   continuing.params=NULL)
 
 # check shit out
 show(load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/spec_MCMC_output1.Robj"))
 layout(t(1:2))
-plot(aD[-(1:40)], xlab="MCMC generation", ylab="value", main="aD")
-plot((aD_accept/aD_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
-plot(as.vector(aE)[-(1:40)], xlab="MCMC generation", ylab="value", main="aE")
-plot((aE_accept/aE_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
-plot(a2[-(1:40)], xlab="MCMC generation", ylab="value", main="a2")
-plot((a2_accept/a2_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
-plot(Prob[-(1:40)], xlab="MCMC generation", main="log likelihood")
-plot((mu_accept/mu_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
-plot((thetas_accept/thetas_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
-hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
-mean(aE/aD)
-sd(aE/aD)
+plot(aD, xlab="MCMC generation", ylab="value", main="aD")
+plot((aD_accept/aD_moves), xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
+plot(as.vector(aE), xlab="MCMC generation", ylab="value", main="aE")
+plot((aE_accept/aE_moves), xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
+plot(a2, xlab="MCMC generation", ylab="value", main="a2")
+plot((a2_accept/a2_moves), xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
+plot(Prob, xlab="MCMC generation", main="log likelihood")
+plot((mu_accept/mu_moves), xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
+plot((thetas_accept/thetas_moves), xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
+hist((aE/aD),breaks=100,main="posterior of aE/aD ratio")
+
+# back transform to get  per km effect
+aD <- aD/spec.geo.effect
+aE <- aE/spec.env.effect
+mean(aE[-c(1:2000)]/aD[-c(1:2000)]) #0.03030492
+sd(aE[-c(1:2000)]/aD[-c(1:2000)]) #0.4417101
+aD <- aD[-c(1:2000)] # drop burnin again
+aE <- aE[-c(1:2000)] 
 
 # convert for ggplotting
 spec.ratio <- aE/aD %>% as.data.frame()
@@ -342,6 +331,10 @@ pop.loc.tess <- pop.loc[!pop.loc$pop %in% drop.pop,]
 droplevels(pop.loc.tess)
 tess.geo <- earth.dist(pop.loc.tess[c("long", "lat")], dist = FALSE)
 
+# standardize geographic distances
+tess.geo.effect <- sd(c(tess.geo)) # save effect size
+tess.geo <- tess.geo/sd(c(tess.geo))
+
 # turn to vectors
 tess.dist <- as.vector(tess.geo)
 tess.gend <- as.vector(tess.p.fst.all)
@@ -358,6 +351,10 @@ tess.env <- tess.env[,!colnames(tess.env) %in% drop.pop]
 colnames(tess.env) <- NULL
 rownames(tess.env) <- NULL
 
+# standardize env distances
+tess.env.effect <- sd(c(tess.env)) # save effect size
+tess.env <- tess.env/sd(c(tess.env))
+
 # run MCMC for 100K gens
 MCMC(   
   counts = tess.ac,
@@ -365,13 +362,13 @@ MCMC(
   D = tess.geo,  # geographic distances
   E = tess.env,  # environmental distances
   k = 5, loci = 3744,  # dimensions of the data
-  delta = 0.001,  # a small, positive, number
-  aD_stp = 0.6,   # step sizes for the MCMC
-  aE_stp = 0.08,
-  a2_stp = 0.08,
+  delta = 0.0001,  # a small, positive, number
+  aD_stp = 0.075,   # step sizes for the MCMC
+  aE_stp = 0.075,
+  a2_stp = 0.075,
   thetas_stp = 0.2,
   mu_stp = 0.35,
-  ngen = 1000000,        # number of steps (2e6)
+  ngen = 2000000,        # number of steps (2e6)
   printfreq = 250,  # print progress (10000)
   savefreq = 250,     # save out current state
   samplefreq = 250,     # record current state for posterior (2000)
@@ -382,19 +379,24 @@ MCMC(
 # check shit out
 show(load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/tess_MCMC_output1.Robj"))
 layout(t(1:2))
-plot(aD[-(1:40)], xlab="MCMC generation", ylab="value", main="aD")
-plot((aD_accept/aD_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
-plot(as.vector(aE)[-(1:40)], xlab="MCMC generation", ylab="value", main="aE")
-plot((aE_accept/aE_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
-plot(a2[-(1:40)], xlab="MCMC generation", ylab="value", main="a2")
-plot((a2_accept/a2_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
-plot(Prob[-(1:40)], xlab="MCMC generation", main="log likelihood")
-plot((mu_accept/mu_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
-plot((thetas_accept/thetas_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
-hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
-hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
-mean(aE/aD)
-sd(aE/aD)
+plot(aD, xlab="MCMC generation", ylab="value", main="aD")
+plot((aD_accept/aD_moves), xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
+plot(as.vector(aE), xlab="MCMC generation", ylab="value", main="aE")
+plot((aE_accept/aE_moves), xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
+plot(a2, xlab="MCMC generation", ylab="value", main="a2")
+plot((a2_accept/a2_moves), xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
+plot(Prob, xlab="MCMC generation", main="log likelihood")
+plot((mu_accept/mu_moves), xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
+plot((thetas_accept/thetas_moves), xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
+hist((aE/aD),breaks=100,main="posterior of aE/aD ratio")
+
+# back transform to get  per km effect
+aD <- aD/tess.geo.effect
+aE <- aE/tess.env.effect
+mean(aE[-c(1:2000)]/aD[-c(1:2000)]) #0.0006686442
+sd(aE[-c(1:2000)]/aD[-c(1:2000)]) #0.0001272785
+aD <- aD[-c(1:2000)] # drop burnin again
+aE <- aE[-c(1:2000)] 
 
 # convert for ggplotting
 tess.ratio <- aE/aD %>% as.data.frame()
@@ -448,6 +450,10 @@ pop.loc.pod <- pop.loc[!pop.loc$pop %in% drop.pop,]
 droplevels(pop.loc.pod)
 pod.geo <- earth.dist(pop.loc.pod[c("long", "lat")], dist = FALSE)
 
+# standardize geographic distances
+pod.geo.effect <- sd(c(pod.geo)) # save effect size
+pod.geo <- pod.geo/sd(c(pod.geo))
+
 # turn to vectors
 pod.dist <- as.vector(pod.geo)
 pod.gend <- as.vector(pod.p.fst.all)
@@ -465,6 +471,10 @@ pod.env <- pod.env[,!colnames(pod.env) %in% drop.pop]
 colnames(pod.env) <- NULL
 rownames(pod.env) <- NULL
 
+# standardize env distances
+pod.env.effect <- sd(c(pod.env)) # save effect size
+pod.env <- pod.env/sd(c(pod.env))
+
 # run MCMC for 100K gens
 MCMC(   
   counts = pod.ac,
@@ -473,12 +483,12 @@ MCMC(
   E = pod.env,  # environmental distances
   k = 3, loci = 978,  # dimensions of the data
   delta = 0.0001,  # a small, positive, number
-  aD_stp = 0.6,   # step sizes for the MCMC
-  aE_stp = 0.1,
-  a2_stp = 0.07,
+  aD_stp = 0.2,   # step sizes for the MCMC
+  aE_stp = 0.2,
+  a2_stp = 0.05,
   thetas_stp = 0.2,
   mu_stp = 0.35,
-  ngen = 1000000,        # number of steps (2e6)
+  ngen = 2000000,        # number of steps (2e6)
   printfreq = 250,  # print progress (10000)
   savefreq = 250,     # save out current state
   samplefreq = 250,     # record current state for posterior (2000)
@@ -489,19 +499,24 @@ MCMC(
 # check shit out
 show(load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/pod_MCMC_output1.Robj"))
 layout(t(1:2))
-plot(aD[-(1:40)], xlab="MCMC generation", ylab="value", main="aD")
-plot((aD_accept/aD_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
-plot(as.vector(aE)[-(1:40)], xlab="MCMC generation", ylab="value", main="aE")
-plot((aE_accept/aE_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
-plot(a2[-(1:40)], xlab="MCMC generation", ylab="value", main="a2")
-plot((a2_accept/a2_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
-plot(Prob[-(1:40)], xlab="MCMC generation", main="log likelihood")
-plot((mu_accept/mu_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
-plot((thetas_accept/thetas_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
-hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
-mean(aE/aD)
-sd(aE/aD)
+plot(aD, xlab="MCMC generation", ylab="value", main="aD")
+plot((aD_accept/aD_moves), xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
+plot(as.vector(aE), xlab="MCMC generation", ylab="value", main="aE")
+plot((aE_accept/aE_moves), xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
+plot(a2, xlab="MCMC generation", ylab="value", main="a2")
+plot((a2_accept/a2_moves), xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
+plot(Prob, xlab="MCMC generation", main="log likelihood")
+plot((mu_accept/mu_moves), xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
+plot((thetas_accept/thetas_moves), xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
+hist((aE/aD),breaks=100,main="posterior of aE/aD ratio")
 
+# back transform to get per km effect
+aD <- aD/pod.geo.effect
+aE <- aE/pod.env.effect
+mean(aE[-c(1:2000)]/aD[-c(1:2000)]) #0.01713707
+sd(aE[-c(1:2000)]/aD[-c(1:2000)]) #0.0406652
+aD <- aD[-c(1:2000)] # drop burnin again
+aE <- aE[-c(1:2000)] 
 
 # convert for ggplotting
 pod.ratio <- aE/aD %>% as.data.frame()
@@ -555,6 +570,10 @@ pop.loc.affin <- pop.loc[!pop.loc$pop %in% drop.pop,]
 droplevels(pop.loc.affin)
 affin.geo <- earth.dist(pop.loc.affin[c("long", "lat")], dist = FALSE)
 
+# standardize geographic distances
+affin.geo.effect <- sd(c(affin.geo)) # save effect size
+affin.geo <- affin.geo/sd(c(affin.geo))
+
 # turn to vectors
 affin.dist <- as.vector(affin.geo)
 affin.gend <- as.vector(affin.p.fst.all)
@@ -572,6 +591,10 @@ affin.env <- affin.env[,!colnames(affin.env) %in% drop.pop]
 colnames(affin.env) <- NULL
 rownames(affin.env) <- NULL
 
+# standardize env distances
+affin.env.effect <- sd(c(affin.env)) # save effect size
+affin.env <- affin.env/sd(c(affin.env))
+
 # run MCMC for 100K gens
 MCMC(   
   counts = affin.ac,
@@ -585,7 +608,7 @@ MCMC(
   a2_stp = 0.07,
   thetas_stp = 0.2,
   mu_stp = 0.35,
-  ngen = 1000000,        # number of steps (2e6)
+  ngen = 2000000,        # number of steps (2e6)
   printfreq = 250,  # print progress (10000)
   savefreq = 250,     # save out current state
   samplefreq = 250,     # record current state for posterior (2000)
@@ -596,19 +619,23 @@ MCMC(
 # check shit out
 show(load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/affin_MCMC_output1.Robj"))
 layout(t(1:2))
-plot(aD[-(1:40)], xlab="MCMC generation", ylab="value", main="aD")
-plot((aD_accept/aD_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
-plot(as.vector(aE)[-(1:40)], xlab="MCMC generation", ylab="value", main="aE")
-plot((aE_accept/aE_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
-plot(a2[-(1:40)], xlab="MCMC generation", ylab="value", main="a2")
-plot((a2_accept/a2_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
-plot(Prob[-(1:40)], xlab="MCMC generation", main="log likelihood")
-plot((mu_accept/mu_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
-plot((thetas_accept/thetas_moves)[-(1:40)], xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
-hist((aE/aD)[-(1:40)],breaks=100,main="posterior of aE/aD ratio")
-mean(aE/aD)
-sd(aE/aD)
+plot(aD, xlab="MCMC generation", ylab="value", main="aD")
+plot((aD_accept/aD_moves), xlab="MCMC generation", ylab="", main="aD acceptance", ylim=c(0,1))
+plot(as.vector(aE), xlab="MCMC generation", ylab="value", main="aE")
+plot((aE_accept/aE_moves), xlab="MCMC generation", ylab="", main="aE acceptance", ylim=c(0,1))
+plot(a2, xlab="MCMC generation", ylab="value", main="a2")
+plot((a2_accept/a2_moves), xlab="MCMC generation", ylab="", main="a2 acceptance", ylim=c(0,1))
+plot(Prob, xlab="MCMC generation", main="log likelihood")
+plot((mu_accept/mu_moves), xlab="MCMC generation", ylab="", main="mu acceptance", ylim=c(0,1) )
+plot((thetas_accept/thetas_moves), xlab="MCMC generation", ylab="", main="thetas acceptance", ylim=c(0,1) )
+hist((aE/aD),breaks=100,main="posterior of aE/aD ratio")
 
+aD <- aD/affin.geo.effect
+aE <- aE/affin.env.effect
+mean(aE[-c(1:2000)]/aD[-c(1:2000)]) #0.02239792
+sd(aE[-c(1:2000)]/aD[-c(1:2000)]) #0.175634
+aD <- aD[-c(1:2000)] # drop burnin again
+aE <- aE[-c(1:2000)] 
 
 # convert for ggplotting
 affin.ratio <- aE/aD %>% as.data.frame()
@@ -621,60 +648,7 @@ colnames(affin.bed.df) <- c("ratio","species")
 fst.df <- rbind.data.frame(sat.df, spec.df, tess.df, pod.df, affin.df)
 write.csv(fst.df, file="~/Dropbox/scarab_migration/data/fst_dist_species.csv")
 
-# violin plots for aE/aD
-load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/satanas_MCMC_output1.Robj", verbose = FALSE)
-sat.ratio <- aE/aD %>% as.data.frame()
-sat.bed.df <- cbind.data.frame(sat.ratio, rep("dichotomius_satanas", nrow(sat.ratio)))
-colnames(sat.bed.df) <- c("ratio","species")
-
-load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/spec_MCMC_output1.Robj", verbose = FALSE)
-spec.ratio <- aE/aD %>% as.data.frame()
-spec.bed.df <- cbind.data.frame(spec.ratio, rep("deltochilum_speciocissimum", nrow(spec.ratio)))
-colnames(spec.bed.df) <- c("ratio","species")
-
-load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/tess_MCMC_output1.Robj", verbose = FALSE)
-tess.ratio <- aE/aD %>% as.data.frame()
-tess.bed.df <- cbind.data.frame(tess.ratio, rep("deltochilum_tesselatum", nrow(tess.ratio)))
-colnames(tess.bed.df) <- c("ratio","species")
-
-load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/tess_MCMC_output1.Robj", verbose = FALSE)
-pod.ratio <- aE/aD %>% as.data.frame()
-pod.bed.df <- cbind.data.frame(pod.ratio, rep("dichotomius_podalirius", nrow(pod.ratio)))
-colnames(pod.bed.df) <- c("ratio","species")
-
-load("/Users/ethanlinck/Dropbox/scarab_migration/bedassle/affin_MCMC_output1.Robj", verbose = FALSE)
-affin.ratio <- aE/aD %>% as.data.frame()
-affin.bed.df <- cbind.data.frame(affin.ratio, rep("eurysternus_affin", nrow(affin.ratio)))
-colnames(affin.bed.df) <- c("ratio","species")
-
 bed.df <- rbind.data.frame(sat.bed.df, spec.bed.df, tess.bed.df, pod.bed.df, affin.bed.df)
 bed.df$species <- factor(bed.df$species,levels=c("eurysternus_affin","dichotomius_podalirius",
                                                  "deltochilum_tesselatum","deltochilum_speciocissimum","dichotomius_satanas"))
-ggplot(bed.df, aes(y=ratio, fill=species)) + 
-  theme_bw() +
-  geom_boxplot(alpha=0.6, binwidth = 0.25) +
-  theme(axis.text.x = element_blank()) +
-  scale_fill_manual(values=wes_palette(n=5, name="FantasticFox1")) +
-  ylim(0,100) +
-  ylab("aE/aD ratio") +
-  theme(
-    strip.background = element_blank(),
-    panel.grid = element_blank())
-
-# version for presentation
-ggplot(bed.df, aes(y=ratio, fill=species)) + 
-  theme_bw() +
-  geom_boxplot(alpha=0.6, binwidth = 0.25) +
-  theme(axis.text.x = element_blank()) +
-  scale_fill_manual(values=wes_palette(n=5, name="FantasticFox1")) +
-  ylim(0,100) +
-  ylab("aE/aD ratio") +
-  theme(
-    strip.background = element_blank(),
-    panel.grid = element_blank(),
-    axis.text=element_text(size=12),
-    strip.text.x=element_text(size=18),
-    axis.title.x=element_text(size=16),
-    axis.title.y=element_text(size=16),
-    legend.title=element_text(size=16),
-    legend.text=element_text(size=14))
+write.csv(bed.df, file="~/Dropbox/scarab_migration/data/bedassle_species.csv")
